@@ -1,6 +1,7 @@
 # =====================================================================
-# Date  : 15 Nov 2020
+# Date  : 5 May 2023
 # Title : train
+# Creator : Iman Sharifi
 # =====================================================================
 
 from decimal import Decimal
@@ -16,26 +17,25 @@ import math
 import numpy as np
 import time
 from utils import get_distance, get_lane
-
-from pyswip import Prolog
-prolog = Prolog()
-
 from torch.utils.tensorboard import SummaryWriter
+from pyswip import Prolog
 
+prolog = Prolog()
 show_video = 1
-N_EPISODES = 20  # number of episodes for training
-WEIGHT_SAVE_STEPS = 10  # save weights after this number of steps
+N_EPISODES = 20000  # number of episodes for training
+WEIGHT_SAVE_STEPS = 50  # save weights after this number of steps
 
 timestr = time.strftime("%Y%m%d-%H%M%S")
+
 
 # =====================================================================
 # create the frame list from the csv files
 def create_frame_list(map_id):
     recordingMeta = csv.DictReader(open("../HighD/Metas/" + str(map_id) + '_recordingMeta.csv')).__next__()
     tracks = csv.DictReader(open("../HighD/Tracks/" + str(map_id) + '_tracks.csv'))
-    tracksMeta = csv.DictReader(open("../HighD/Statics/" + str(map_id) + '_tracksMeta.csv'))
+    # tracksMeta = csv.DictReader(open("../HighD/Statics/" + str(map_id) + '_tracksMeta.csv'))
 
-    print(recordingMeta)
+    # print(recordingMeta)
 
     frame_list = []
     frame_len = int(Decimal(recordingMeta['duration']) * int(recordingMeta['frameRate']))
@@ -51,6 +51,7 @@ def create_frame_list(map_id):
         i = i + 1
 
     return frame_list
+
 
 # =====================================================================
 # create the car list for a frame
@@ -81,6 +82,7 @@ def get_car_list(frame):
 
     return vehicles_id, vehicles_lane, vehicles_pos, vehicles_vel, X_vel
 
+
 # =====================================================================
 # main
 if __name__ == '__main__':
@@ -90,7 +92,7 @@ if __name__ == '__main__':
     timestep = 1 / 25
 
     frame_list = []
-    map_list = ["01", "02", "03", 11]  # ,14,15,16,17,18,19,20,21,22,23,24]
+    map_list = ["01", "02", "03", 11, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
     for track_id in map_list:
         print('get', track_id)
         a_frame_list = create_frame_list(track_id)
@@ -136,7 +138,7 @@ if __name__ == '__main__':
     pygame.display.set_caption('Highway')
 
     # create list for rewards
-    R_lc, R_c, R_out, R_end, R_t = [], [], [], [], []
+    R_lc, R_c, R_out, R_end, R_t, R_sum = [], [], [], [], [], []
     n_hits = []
     steps, Steps = 0, []
 
@@ -144,6 +146,7 @@ if __name__ == '__main__':
     while episode < n_episodes:
 
         steps += 1
+
         # get vehicle info
         vehicles_id, vehicles_lane, vehicles_pos, vehicles_vel, X_vel = get_car_list(frame)
         vehicle_pos_pygame = [pygame.Rect(rect) for rect in vehicles_pos]
@@ -161,40 +164,32 @@ if __name__ == '__main__':
                 for vId, vLane, v_pos, v_pos_pygame, v_vel in zip(vehicles_id, vehicles_lane, vehicles_pos,
                                                                   vehicle_pos_pygame, vehicles_vel):
                     d = get_distance([x_ego, y_ego], [v_pos[0], v_pos[1]])
-                    if d < 150 and 4 <= int(vLane) <= 6:
+                    if d < 70 and 4 <= int(vLane) <= 6:
                         pygame.draw.rect(screen, RED, v_pos_pygame)
+                        X_pos = v_pos[0] + v_pos[2] / 2
+                        Y_pos = v_pos[1] + v_pos[3] / 2
 
                         # Sending vehicles info to prolog
-                        facts = f"vehicle(v{vId}, {vLane}, {v_pos[0]:.4f}, {v_pos[1]:.4f}, {v_vel[0]:.4f}, {v_vel[1]:.4f}, 100).\n"
+                        facts = f"vehicle(v{vId}, {vLane}, {X_pos:.4f}, {Y_pos:.4f}, {v_pos[2]:.4f}, {v_pos[3]:.4f}, {v_vel[0]:.4f}, {v_vel[1]:.4f}, 100).\n"
                         f.write(facts)
                     else:
                         pygame.draw.rect(screen, WHITE, v_pos_pygame)
 
                 # Sending Ego info
                 EgoLane = get_lane(agent.y, LANES_Y)
-                EgoFact = f"vehicle(ego, {EgoLane}, {agent.x:.4f}, {agent.y:.4f}, {agent.velocity_x:.4f}, {agent.velocity_y:.4f}, 100).\n"
+                EgoFact = f"vehicle(ego, {EgoLane}, {agent.x:.4f}, {agent.y:.4f}, {agent.width:.4f}, {agent.height:.4f}, {agent.velocity_x:.4f}, {agent.velocity_y:.4f}, 100).\n"
                 f.write(EgoFact)
                 f.close()
 
             # reconsult the prolog file to load clauses for finding safe actions
             # you should add 'reconsult' command like 'consult' in pyswip file -> find prolog.py in pyswip installed directory
             prolog.reconsult('prolog files/choosing_actions_highway.pl')
-            # Action = list(prolog.query('safe_actions(Action)'))
-            # L = list(prolog.query('possible_actions(Actions)'))
-            # Actions = []
-            # for action in L[0]['Actions']:
-            #     Actions.append(str(action))
-            Desired_velocity_x = list(prolog.query('desired_velocity_x(Vd_x)'))
 
-            # print(f">>> Safe action: {Action[0]['Action']}.")
-            # print(f">>> Possible actions: {Actions}.")
-            # print(f">>> Desired Velocity x: {Desired_velocity_x[0]['Vd_x']}.", end="\n")
+            #  extract the longitudinal acceleration from prolog
+            Acceleration_x = list(prolog.query('acceleration_x(Ax)'))
 
-            # agent.safe_action = Action[0]['Action']
-            # agent.possible_actions = Actions
-            agent.V_x_desired = Desired_velocity_x[0]['Vd_x']
-
-            # print(list(prolog.query('listing(vehicle)')),end='\n\n')
+            # set the longitudinal acceleration to agent
+            agent.Acceleration_x = Acceleration_x[0]['Ax']
 
             EgoRect, EgoColor = agent.rect, agent.color
             pygame.draw.rect(screen, EgoColor, EgoRect)
@@ -210,7 +205,7 @@ if __name__ == '__main__':
 
             print(f'Episode {episode + 1} is done !===============================')
 
-            frame = 0
+            # frame = 0
             # compare this episodes and the current best
             # episode's score
             if score >= best_score:
@@ -230,10 +225,7 @@ if __name__ == '__main__':
             agent.dq_agent.losses = []
             scores.append(score)
 
-            print('right_front ' + str(agent.n_hits_right_front))
-            print('right_back ' + str(agent.n_hits_right_back))
-            print('left_front ' + str(agent.n_hits_left_front))
-            print('left_back ' + str(agent.n_hits_left_back))
+            print(f'Number of hits: {agent.n_hits}')
 
             # Total steps
             Steps.append(steps)
@@ -245,6 +237,10 @@ if __name__ == '__main__':
             R_end.append(agent.end_of_lane_reward_sum)
             R_t.append(agent.time_waste_reward_sum)
 
+            r_sum = agent.lane_change_reward_sum + agent.collision_reward_sum + agent.out_of_highway_reward_sum \
+                    + agent.end_of_lane_reward_sum + agent.time_waste_reward_sum
+            R_sum.append(r_sum)
+
             # Number of hits
             n_hits.append(agent.n_hits)
 
@@ -253,20 +249,25 @@ if __name__ == '__main__':
 
             # specify column name to each list
             df['steps'] = Steps
-            df['R_lc'] = R_lc ; df['R_c'] = R_c; df['R_out'] = R_out
-            df['R_end'] = R_end; df['R_t'] = R_t
+            df['R_lc'] = R_lc
+            df['R_c'] = R_c
+            df['R_out'] = R_out
+            df['R_end'] = R_end
+            df['R_t'] = R_t
+            df['R_sum'] = R_sum
             df['n_hits'] = n_hits
             df['Loss'] = avg_losses
 
             # Save dataframe to excel
-            if int((episode+1)%3)== 0:
-                df.to_excel('exported_data.xlsx')
+            if int((episode + 1) % WEIGHT_SAVE_STEPS) == 0:
+                df.to_excel('dqn_exported_data.xlsx')
 
             episode += 1
             steps = 0
 
             # make the summation of each reward subfunction zero
             agent.reset_rewards()
+            agent.n_hits = 0
 
         frame += 1
         # restart
@@ -278,10 +279,11 @@ if __name__ == '__main__':
         if episode % WEIGHT_SAVE_STEPS == 0:
             agent.dq_agent.net.save_weights("weights/weights_" + str(timestr))
 
+        # time.sleep(1)
+
     writer.close()
     f = open("result_collision.txt", "a")
-    f.write("Number of Collision: " + ':' + str(agent.n_hits_right_front) + ':' + str(agent.n_hits_right_back) + ':' + 
-            str(agent.n_hits_left_front) + ':' + str(agent.n_hits_left_back) + "\n")
+    f.write("Number of Collision: " + str(agent.n_hits) + "\n")
     f.close()
 
     # save weights at the end of the training
