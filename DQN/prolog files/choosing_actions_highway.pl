@@ -87,37 +87,37 @@ south(Car):-neighboring_cars(Car),
 east(Car):-neighboring_cars(Car),
             vehicle(ego,Lane1,_,_,_,_,_,_,_),
             vehicle(Car,Lane2,_,_,_,_,_,_,_),
-            distanceX(ego,Car,D),D =< 10,
+            distanceX(ego,Car,D),D is 0,
             (Lane1<4,Lane2 is Lane1-1;Lane1>=4,Lane2 is Lane1+1),!.
 
 west(Car):-neighboring_cars(Car),
             vehicle(ego,Lane1,_,_,_,_,_,_,_),
             vehicle(Car,Lane2,_,_,_,_,_,_,_),
-            distanceX(ego,Car,D),D =< 10,
+            distanceX(ego,Car,D),D is 0,
             (Lane1<4,Lane2 is Lane1+1;Lane1>=4,Lane2 is Lane1-1),!.
 
 northeast(Car):-neighboring_cars(Car),
                 vehicle(ego,Lane1,Px1,_,_,_,_,_,_),
                 vehicle(Car,Lane2,Px2,_,_,_,_,_,_),
-                distanceX(ego,Car,D),D > 10,
+                distanceX(ego,Car,D),D > 0,
                 (Lane1<4,Lane2 is Lane1-1,Px2 < Px1;Lane1>=4,Lane2 is Lane1+1,Px2 > Px1),!.
 
 northwest(Car):-neighboring_cars(Car),
                 vehicle(ego,Lane1,Px1,_,_,_,_,_,_),
                 vehicle(Car,Lane2,Px2,_,_,_,_,_,_),
-                distanceX(ego,Car,D),D > 10,
+                distanceX(ego,Car,D),D > 0,
                 (Lane1<4,Lane2 is Lane1+1,Px2 < Px1;Lane1>=4,Lane2 is Lane1-1,Px2 > Px1),!.
 
 southeast(Car):-neighboring_cars(Car),
                 vehicle(ego,Lane1,Px1,_,_,_,_,_,_),
                 vehicle(Car,Lane2,Px2,_,_,_,_,_,_),
-                distanceX(ego,Car,D),D > 10,
+                distanceX(ego,Car,D),D > 0,
                 (Lane1<4,Lane2 is Lane1-1,Px2 > Px1;Lane1>=4,Lane2 is Lane1+1,Px2 < Px1),!.
 
 southwest(Car):-neighboring_cars(Car),
                 vehicle(ego,Lane1,Px1,_,_,_,_,_,_),
                 vehicle(Car,Lane2,Px2,_,_,_,_,_,_),
-                distanceX(ego,Car,D),D > 10,
+                distanceX(ego,Car,D),D > 0,
                 (Lane1<4,Lane2 is Lane1+1,Px2 > Px1;Lane1>=4,Lane2 is Lane1-1,Px2 < Px1),!.
 
 % Is there any car near the ego car?
