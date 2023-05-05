@@ -12,6 +12,7 @@ interaction with real envirounment while the safety is assured. We have implemen
 and proved that with our method, the agent did not involve in unsafe actions in both the training and test scenarios. Moreover,
 we have shown that the method outperformed the DRL agent without SLP.
 
+## How to Run:
 Running steps on Ubuntu 20.04:
 
 1- create a virtual environment using `pycharm` or `virtualenv`
@@ -42,4 +43,4 @@ next(cls.query(filename.join(["reconsult('", "')"]), catcherrors=catcherrors))
 git clone https://github.com/CAV-Research-Lab/Safe-Reinforcement-Learning-using-Symbolic-Logical-Programming-for-Autonomous-Highway-Driving.git
 ```
 
-6- run `train.py` in `SDQN/` directory of the cloned repository to train the agent
+6- run `train.py` in `DQN+SLP/` directory of the cloned repository to train the agent
