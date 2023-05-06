@@ -6,9 +6,6 @@
 :- ['vehicle_clauses.pl'].
 
 % vehicle(ego, 4, 20, 4.5, 70, 0, 0).
-% vehicle(v1, 4, 30, 4.5, 90, 0, 0).
-% vehicle(v2, 6, 30, 4.5, 90, 0, 0).
-
 % vehicle(v1, 1, 20, 1.5, 0, 0, 0).
 % vehicle(v2, 3, 20, 7.5, 0, 0, 0).
 % vehicle(v3, 1, 40, 1.5, 0, 0, 0).
@@ -41,7 +38,7 @@ max_speed(Lane,MaxSpeed):-(Lane is 1 -> MaxSpeed is 100;
                            Lane is 6 -> MaxSpeed is 100).
 
 time_step(0.04).
-critical_distance(30).
+critical_distance(20).
 safe_distance(X):-critical_distance(Y),X>Y.
 
 % :-vehicle(ego,Lane,_,_,Vx,_,_),max_speed(Lane,MaxSpeed),
@@ -64,7 +61,7 @@ distanceX(Car1,Car2,D):-vehicle(Car1,_,X1,_,W1,_,_,_,_),
 
 distanceY(Car1,Car2,D):-vehicle(Car1,_,_,Y1,_,H1,_,_,_),
                         vehicle(Car2,_,_,Y2,_,H2,_,_,_), 
-                        D is abs(Y1-Y2)-0.5*(H1+H2).
+                        (abs(Y1-Y2)>0.5*(H1+H2) -> D is abs(Y1-Y2)-0.5*(H1+H2); D is 0).
 
 relativeVelocity(Car1,Car2,RelVel):-vehicle(Car1,_,_,_,_,_,Vx1,_,_),
                                     vehicle(Car2,_,_,_,_,_,Vx2,_,_),
@@ -217,16 +214,20 @@ safe_actions(Action):-vehicle(ego,Lane,_,_,_,_,_,_,_),
 safe_actions(Action):-Action = lane_keeping.
 
 % possible actions
-safe_actions1(Action):-Action = lane_keeping.
+safe_actions1(Action):-
+    (((south_is_busy,south(Car),distanceX(ego,Car,D),critical_distance(C),D<C))->Action = lane_change;
+    Action = lane_keeping).
 
 safe_actions1(Action):-vehicle(ego,Lane,_,_,_,_,_,_,_),
                     not(Lane is 3),not(Lane is 4),
-                    west_is_free, northwest_is_free, southwest_is_free,
+                    (west_is_free,southwest_is_free;
+                    west_is_free,southwest_is_busy,southwest(Car),relativeVelocity(ego,Car,RV),RV > 0),
                     Action = left_lane_change.
 
 safe_actions1(Action):-vehicle(ego,Lane,_,_,_,_,_,_,_),
                     not(Lane is 1),not(Lane is 6),
-                    east_is_free, northeast_is_free, southeast_is_free,
+                    (east_is_free,southeast_is_free;
+                    east_is_free,southeast_is_busy,southeast(Car),relativeVelocity(ego,Car,RV),RV > 0),
                     Action = right_lane_change.
 
 possible_actions(Actions):-findall(Action,safe_actions1(Action),Actions).
