@@ -46,6 +46,7 @@ safe_distance(X):-critical_distance(Y),X>Y.
 
 % Define the available actions for the ego car
 % The format is action(ActionName)
+action(lane_change).
 action(right_lane_change).
 action(left_lane_change).
 action(lane_keeping).
