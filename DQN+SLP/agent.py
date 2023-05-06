@@ -16,32 +16,32 @@ LANES_Y = [25, 36, 48, 81, 93, 108, 114]
 # LANES_Y = [25, 36, 79, 81, 93, 106, 108]
 ROAD_LENGTH = 1366.0  # image pixel
 REAL_ROAD_LENGTH = 420.0  # meter
-TIME_STEP = 1.0 / 25.0
+TIME_STEP = 1.0/25.0
 
 # agent car details
-ACTIONS = ["lane_keeping", "left_lane_change", "right_lane_change"]
+ACTIONS = ["lane_keeping", "left_lane_change", "right_lane_change" ]
 
-MIN_SPEED = 30  # minimum speed of the agent car
-MAX_SPEED = 125  # maximum speed
-ACCELERATION = 3  # acceleration
-DEACCELERATION = 5  # deacceleration
-SENSOR_RANGE = 250  # maximum range of the sensors of the car
+MIN_SPEED = 30       # minimum speed of the agent car
+MAX_SPEED = 125      # maximum speed
+ACCELERATION = 3     # acceleration
+DEACCELERATION = 5   # deacceleration
+SENSOR_RANGE =  250  # maximum range of the sensors of the car
 
 # dqn
-LEARNING_RATE = 0.00001  # learning rate
-GAMMA = 0.995  # discount factor
-EPS = 1.0  # initial epsilon
-EPS_FINAL = 0.001  # final epsilon
-EPS_DECAY = 9e-7  # epsilon decay
-MEM_SIZE = int(1e3)  # memory size                            ***
-BATCH_SIZE = 128  # experience the batch size
+LEARNING_RATE = 0.00001   # learning rate
+GAMMA = 0.995             # discount factor
+EPS = 1.0                 # initial epsilon
+EPS_FINAL = 0.001         # final epsilon
+EPS_DECAY = 9e-7          # epsilon decay
+MEM_SIZE = int(1e3)       # memory size                            ***
+BATCH_SIZE = 128          # experience the batch size
 
 # reward details
-CAR_HIT_REWARD = -300  # if hit by a car
-END_OF_LANE_REWARD = 30  # for reaching to the end of the lane
-REWARD_LANE_CHANGE = -1  # reward for unnecessary lane change
+CAR_HIT_REWARD = -300             # if hit by a car
+END_OF_LANE_REWARD = 30           # for reaching to the end of the lane
+REWARD_LANE_CHANGE = -1           # reward for unnecessary lane change
 REWARD_OUT_OF_LEGAL_LANES = -300  # reward for getting out of the highway lanes
-REWARD_TIME_WASTE = -0.1  # reward for wasting time
+REWARD_TIME_WASTE = -0.1          # reward for wasting time
 # the car infront is away from the agent than this amount
 # but agent change the lane it is a unnecessary lane change
 
@@ -54,35 +54,34 @@ REWARD_TIME_WASTE = -0.1  # reward for wasting time
 
 LANE_CHANGE_STEPS = 5  # time steps required for state transition (lane change)
 
-
 # =====================================================================
 # the car class for the DQ
 class AgentCar:
+
     min_speed = MIN_SPEED
     max_speed = MAX_SPEED
     acceleration = ACCELERATION
     deacceleration = DEACCELERATION
     sensor_range = SENSOR_RANGE
-
-    #    max_velocity_other_cars = MAX_SPEED
+#    max_velocity_other_cars = MAX_SPEED
 
     # =====================================================================
     # eps = initial epsilon value
-    def __init__(self, width=15, height=8, lane=5, speed=72, direction=1, eps=0.1):
-
+    def __init__( self, width=15, height=8, lane=5, speed=72, direction=1, eps=0.1 ):
+        
         self.dt = TIME_STEP
-        self.init_lane = lane  # initial lane
-        self.init_speed = speed  # initial speed
-        self.width = width  # width of the car
-        self.height = height  # height
+        self.init_lane = lane     # initial lane
+        self.init_speed = speed     # initial speed
+        self.width = width          # width of the car
+        self.height = height        # height
         self.direction = direction  # 1 is right, -1 left
-        self.reset()  # initial states
-        self.reset_rewards()  # reset rewards
+        self.reset()                # initial states
+        self.reset_rewards()        # reset rewards
 
-        self.n_hits = 0  # number of collision
+        self.n_hits = 0             # number of collision
 
         # reactangle for the car
-        self.rect = pygame.Rect(self.x - int(width / 2), self.y - int(height / 2), self.width, self.height)
+        self.rect = pygame.Rect(self.x-int(width/2), self.y-int(height/2), self.width, self.height)
 
         # the DQN agent
         self.dq_agent = DQAgent(lr=LEARNING_RATE, gamma=GAMMA, eps=eps, eps_final=EPS_FINAL,
@@ -106,8 +105,8 @@ class AgentCar:
 
     # =====================================================================
     # restart
-    def reset(self):
-        self.lane = random.randint(3, 5)
+    def reset( self ):
+        self.lane = random.randint(3,5)
 
         # get the initial x value
         if self.direction == 1:
@@ -116,7 +115,7 @@ class AgentCar:
             self.x = 1000
 
         # get the initial y value
-        self.y = LANES_Y[self.lane] - 5
+        self.y = LANES_Y[self.lane]-5
         self.lane = get_lane(self.y, LANES_Y)
 
         # reset states
@@ -126,14 +125,14 @@ class AgentCar:
         self.color = (0, 255, 0)
 
         self.score = 0  # score of this episode
-        self.time = 0  # time of this episode
+        self.time = 0 # time of this episode
 
         # state and action of  the previous frame
         self.last_state = None
         self.last_action = 0
 
-        self.rewards = []  # all the rewards of the currect episode
-        self.level = 0  #
+        self.rewards = []   # all the rewards of the currect episode
+        self.level = 0      #
 
         # current distance travelled
         self.distance_traveled = 0
@@ -147,7 +146,7 @@ class AgentCar:
 
         self.previous_action = 'lane_keeping'
         self.action_repeat = 0
-
+    
     def reset_rewards(self):
         self.lane_change_reward_sum = 0
         self.collision_reward_sum = 0
@@ -162,23 +161,23 @@ class AgentCar:
         lane = get_lane(self.y, LANES_Y)
         if 4 <= lane <= 6:
             if action == 'right_lane_change' and lane < 6:
-                y_desired = LANES_Y[lane] - 5
-                self.n_lane_changes += 1
+                y_desired = LANES_Y[lane]-5
+                self.n_lane_changes+=1
             elif action == 'left_lane_change' and lane > 4:
-                y_desired = LANES_Y[lane - 2] - 5
-                self.n_lane_changes += 1
+                y_desired = LANES_Y[lane-2]-5
+                self.n_lane_changes+=1
             else:
-                y_desired = LANES_Y[lane - 1] - 5
+                y_desired = LANES_Y[lane-1]-5
 
         else:
             if action == 'right_lane_change' and lane > 1:
-                y_desired = LANES_Y[lane - 2] - 5
-                self.n_lane_changes += 1
+                y_desired = LANES_Y[lane-2]-5
+                self.n_lane_changes+=1
             elif action == 'left_lane_change' and lane < 3:
-                y_desired = LANES_Y[lane] - 5
-                self.n_lane_changes += 1
+                y_desired = LANES_Y[lane]-5
+                self.n_lane_changes+=1
             else:
-                y_desired = LANES_Y[lane - 1] - 5
+                y_desired = LANES_Y[lane-1]-5           
 
         self.velocity_y = self.y_PI_Control(y_desired)
 
@@ -193,17 +192,26 @@ class AgentCar:
             return 'right_lane_change'
 
     def y_PI_Control(self, y_desired):
-
+        
         Kp, Ki = 5, 2
         e_p = y_desired - self.y
-        self.e_i_y += e_p * self.dt
-        u = Kp * e_p + Ki * self.e_i_y
+        self.e_i_y += e_p*self.dt
+        u = Kp*e_p+Ki*self.e_i_y
+
+        return u
+
+    def Vx_PI_Control(self, Vx_desired):
+        
+        Kp, Ki = 5, 2
+        e_p = Vx_desired - self.velocity_x
+        self.e_i_V += e_p*self.dt
+        u = Kp*e_p + Ki*self.e_i_V
 
         return u
 
     # =====================================================================
     # reward functions
-    def get_lane_change_reward(self, action):
+    def get_lane_change_reward( self, action ):
 
         if action == 'left_lane_change' or action == 'right_lane_change':
             return REWARD_LANE_CHANGE
@@ -215,32 +223,33 @@ class AgentCar:
         reward_collision = 0
         done = False
         W, H = self.width, self.height
-        X = self.x - int(W / 2)
-        Y = self.y - int(H / 2)
+        X = self.x-int(W/2)
+        Y = self.y-int(H/2)
         ego_rect = pygame.Rect(X, Y, W, H)
 
-        for vehicle_rect in car_list2:
-            intersection_rect = ego_rect.clip(vehicle_rect)
-            if intersection_rect.w > 0 and intersection_rect.h > 0:
-                self.n_hits += 1
-                reward_collision = CAR_HIT_REWARD
-                done = True
+        if self.x > 100:
+            for vehicle_rect in car_list2:
+                intersection_rect = ego_rect.clip(vehicle_rect)
+                if intersection_rect.w > 0 and intersection_rect.h > 0:
+                    self.n_hits += 1
+                    reward_collision = CAR_HIT_REWARD
+                    done = True
 
         return reward_collision, done
-
+    
     def get_end_of_lane_reward(self):
         # End of the lane
         done = False
         if self.x >= (ROAD_LENGTH - 20):
             reward_end = END_OF_LANE_REWARD
-            #                self.next_turn()
+    #                self.next_turn()
             done = True
         else:
             reward_end = 0
 
         return reward_end, done
-
-    def get_out_of_legal_lanes_reward(self, action):
+    
+    def get_out_of_legal_lanes_reward( self, action):
         done = False
         reward_out = 0
         # lane = get_lane(self.y, LANES_Y)
@@ -267,21 +276,21 @@ class AgentCar:
     #   car_list = list of other cars as rectangle objecs
     #   surface  = provide to draw the surface
     #   learn    = enable or disable learning
-    def update(self, dt, car_list, car_list2, velocities, surface=None):
+    def update( self, dt, car_list, car_list2, velocities, surface=None ):
         done = False
-        learn = False
+        learn = False        
 
         print(f"Ego position: X = {self.x:.4f}, Y = {self.y:.4f}, Lane = {get_lane(self.y, LANES_Y)}.")
         # get distances to surrounding cars
-        distances, velocities_ = self.radar(car_list, velocities, surface)
-        state = self.get_state(distances, velocities_)
+        distances, velocities_ = self.radar( car_list, velocities, surface )
+        state = self.get_state( distances, velocities_ )
 
         # Safe action set
         self.dq_agent.possible_actions = self.possible_actions
 
         # (Safe) DQN Action =====================================
         if self.action_repeat == 0:
-            self.previous_action = self.dq_agent.next_action(state)
+            self.previous_action = self.dq_agent.next_action( state )
             learn = True
 
         action = self.previous_action
@@ -308,30 +317,31 @@ class AgentCar:
         # if learn is enabled
         if learn:
             if self.last_state is not None:
-                self.dq_agent.memory.push(self.last_state, state, self.last_action, reward, done3)
+                self.dq_agent.memory.push(self.last_state, state, self.last_action, reward, done3 )
 
             self.last_state = state
             self.last_action = action
             self.score += reward
-            score = self.score
+            score  = self.score
 
             self.dq_agent.learn()
 
-        self.rewards.append(reward)
+        self.rewards.append( reward )
 
         # if terminal state met
         done = done1 or done2 or done3
         if done:
             if (len(self.rewards) > 0):
-                avg_reward = np.average(self.rewards)
-            print(f'Epsilon:{truncate(self.dq_agent.eps, 3)}, Avg-reward: {truncate(avg_reward, 2)}')
-
+                avg_reward = np.average( self.rewards )
+            print( f'Epsilon:{truncate(self.dq_agent.eps, 3)}, Avg-reward: {truncate(avg_reward, 2)}' )
+    
             self.terminal_count += 1
             self.reset()
         else:
             # Velocity Control =================================
+            # ax = self.Vx_PI_Control(self.V_x_desired)
             ax = self.Acceleration_x
-            self.velocity_x += ax * dt
+            self.velocity_x +=  ax*dt
 
             # Execute action ==================================
             # self.perform_action(self.safe_action)
@@ -340,7 +350,7 @@ class AgentCar:
             # Update longitudinal and lateral positions of Ego Vehicle and the assigned rectangle
             self.x += self.velocity_x * dt
             self.y += self.velocity_y * dt
-            self.rect.center = (self.x, self.y)
+            self.rect.center = ( self.x, self.y )
 
         # time
         self.time += dt
@@ -357,51 +367,51 @@ class AgentCar:
     #          left_front_car_dis, left_back_car_dis,
     #          right_front_car_dis, right_back_car_dis,
     #          lane, speed]      ( all are normalized(0 - 1))
-    def get_state(self, distances, velocities):
+    def get_state( self, distances, velocities ):
         state = distances.copy()
 
         if self.direction == -1:
             # swap front and back car  distances
             for i in range(0, 5, 2):
-                temp = state[i + 1]
-                state[i + 1] = state[i]
+                temp = state[i+1]
+                state[i+1] = state[i]
                 state[i] = temp
 
         state = [i / AgentCar.sensor_range for i in state]
-        state.append(self.velocity_x / AgentCar.max_speed)
+        state.append( self.velocity_x / AgentCar.max_speed )
         return state
 
     # =====================================================================
     # get the distances to nearest cars in this lane, and left and right lanes
-    def radar(self, car_list, velocities, surface=None):
+    def radar( self, car_list, velocities, surface = None ):
         car_lists = [[], [], [], [], [], []]
 
         # go through each car
-        # print('car lists radar en basi',car_lists, len( car_list ))
-        for i in range(len(car_list)):
+        #print('car lists radar en basi',car_lists, len( car_list ))
+        for i in range( len( car_list ) ):
             car = car_list[i]
             velocity = velocities[i]
 
-            lane = get_lane(self.y, LANES_Y)
+            lane = get_lane( self.y, LANES_Y )
             # cars in the lane
             if lane == self.lane:
-                if car.left > self.x:
-                    car_lists[0].append((car, velocity))
+                if car.left  > self.x:
+                    car_lists[0].append( (car, velocity) )
 
                 else:
-                    car_lists[1].append((car, velocity))
+                    car_lists[1].append( (car, velocity) )
 
             # cars in the above lane
             elif lane == self.lane - 1:
-                # ignore cars between 2 main lanes
+                 # ignore cars between 2 main lanes
                 if self.direction == 1 and lane == 2:
                     continue
 
                 if car.center[0] > self.x:
-                    car_lists[2].append((car, velocity))
+                    car_lists[2].append( (car, velocity) )
 
                 else:
-                    car_lists[3].append((car, velocity))
+                    car_lists[3].append( (car, velocity) )
 
             # cars in the below lane
             elif lane == self.lane + 1:
@@ -410,19 +420,19 @@ class AgentCar:
                     continue
 
                 if car.center[0] > self.x:
-                    car_lists[4].append((car, velocity))
+                    car_lists[4].append( (car, velocity) )
 
                 else:
-                    car_lists[5].append((car, velocity))
+                    car_lists[5].append( (car, velocity) )
 
         distances = []
         velocities_ = []
 
         # get distances and draw rays (if surfaces is provided)
-        for i in range(6):
+        for i in range( 6 ):
 
             if i % 2 == 0:
-                c, distance, velocity = self.get_closest_car_lane(car_lists[i])
+                c, distance, velocity = self.get_closest_car_lane( car_lists[i] )
 
                 if c is not None:
                     if self.direction == 1:
@@ -441,49 +451,50 @@ class AgentCar:
 
                     if surface is not None:
                         if distance > 0:
-                            self.draw_ray(surface, c);
+                            self.draw_ray( surface, c );
                         else:
-                            self.draw_ray(surface, c, side=True)
+                            self.draw_ray( surface, c, side=True )
 
             else:
-                c, distance, velocity = self.get_closest_car_lane(car_lists[i], False)
+                c, distance, velocity = self.get_closest_car_lane( car_lists[i], False )
 
                 if c is not None:
                     if surface is not None:
                         if distance > 0:
-                            self.draw_ray(surface, c, pos=False)
+                            self.draw_ray( surface, c, pos=False )
                         else:
-                            self.draw_ray(surface, c, pos=False, side=True);
+                            self.draw_ray( surface, c, pos=False, side=True );
 
-            distances.append(distance)
-            velocities_.append(velocity)
+
+            distances.append( distance )
+            velocities_.append( velocity )
 
         return distances, velocities_
 
     # =====================================================================
     # get the closet car of a given car list on a lane
     # pos true if x positive direction
-    def get_closest_car_lane(self, car_list, pos=True):
-        if len(car_list) > 0:  # if the list is not empty
-            l = []  # distance to all the cars
+    def get_closest_car_lane( self, car_list, pos=True ):
+        if len(car_list) > 0:   # if the list is not empty
+            l = [] # distance to all the cars
 
             # go through each car
             for car, _ in car_list:
                 k = self.width / 2 + car.width / 2 + 5
 
-                if pos:  # for the positive x direction
+                if pos: # for the positive x direction
                     if car.center[0] - self.x > k:
-                        l.append(car.left - self.x)
+                        l.append( car.left - self.x )
 
-                    else:  # if the car is very close to the agent append 0
-                        l.append(0)
+                    else: # if the car is very close to the agent append 0
+                        l.append( 0 )
 
-                else:  # for the negative direction
+                else: # for the negative direction
                     if self.x - car.center[0] > k:
-                        l.append(self.x - car.right)
+                        l.append( self.x - car.right )
 
                     else:
-                        l.append(0)
+                        l.append( 0 )
 
             # get the minimum length
             i = np.argmin(l)
@@ -496,7 +507,7 @@ class AgentCar:
                 distance = self.x - car.right
 
             # if the car is out of the range
-            # print('distance',distance)
+            #print('distance',distance)
             if distance > AgentCar.sensor_range:
                 return None, AgentCar.sensor_range, 0.0
 
@@ -506,27 +517,28 @@ class AgentCar:
 
     # =====================================================================
     # draw a ray to closest car
-    def draw_ray(self, surface, car, side=False, pos=True):
-        lane = get_lane(self.y, LANES_Y)
+    def draw_ray( self, surface, car, side=False, pos=True ):
+        lane = get_lane( self.y, LANES_Y )
 
         if not side:
             if pos:
-                pygame.draw.line(surface, (255, 0, 0), (self.x, LANES_Y[lane]), (car.left, LANES_Y[lane]), 2)
+                pygame.draw.line( surface, (255, 0, 0), (self.x, LANES_Y[lane] ), (car.left, LANES_Y[lane] ), 2 )
 
             else:
-                pygame.draw.line(surface, (255, 0, 0), (self.x, LANES_Y[lane]), (car.right, LANES_Y[lane]), 2)
+                pygame.draw.line( surface, (255, 0, 0), (self.x, LANES_Y[lane] ), (car.right, LANES_Y[lane] ), 2 )
 
         else:
-            pygame.draw.line(surface, (0, 255, 255), (self.x, self.y), (self.x, LANES_Y[lane]), 2)
+             pygame.draw.line( surface, (0, 255, 255), (self.x, self.y ), (self.x, LANES_Y[lane] ), 2 )
 
     # =====================================================================
     # draw the agent
-    def draw(self, surface):
-        pygame.draw.rect(surface, self.color, self.rect)
+    def draw( self, surface ):
+        pygame.draw.rect( surface, self.color, self.rect )
 
     # =====================================================================
     # get the lane of the given rectangle car
     @staticmethod
-    def get_track(rect):
-        temp = np.array(LANES_Y)
-        return int(np.argmin(np.abs(temp - rect.center[1])))
+    def get_track( rect ):
+        temp = np.array( LANES_Y )
+        return int( np.argmin( np.abs(temp - rect.center[1] )) )
+
