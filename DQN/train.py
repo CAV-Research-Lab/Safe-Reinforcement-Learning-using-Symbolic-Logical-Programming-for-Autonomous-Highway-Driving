@@ -198,7 +198,7 @@ if __name__ == '__main__':
             # time.sleep(1)
 
         # update the agent car
-        done, score = agent.update(timestep, vehicle_pos_pygame, vehicles_pos, X_vel)
+        done, score = agent.update(timestep, vehicle_pos_pygame, vehicles_pos, X_vel, train=True)
 
         # end the episode if done
         if done:
