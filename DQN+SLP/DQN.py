@@ -29,7 +29,7 @@ class DQN(nn.Module):
     #   fc2_units  = fc2 units
     #   n_actions  = numver of actions
     def __init__(self, lr, state_size, fc1_units, fc2_units, n_actions,
-                 weight_file_path="weights/best_weights_18_20230422-155415"):
+                 weight_file_path="weights/best_weights_25.0_20230506-210352"):
         super(DQN, self).__init__()
 
         # initialize

@@ -201,15 +201,6 @@ class AgentCar:
 
         return u
 
-    def Vx_PI_Control(self, Vx_desired):
-
-        Kp, Ki = 5, 2
-        e_p = Vx_desired - self.velocity_x
-        self.e_i_V += e_p * self.dt
-        u = Kp * e_p + Ki * self.e_i_V
-
-        return u
-
     # =====================================================================
     # reward functions
     def get_lane_change_reward(self, action):
@@ -341,7 +332,6 @@ class AgentCar:
             self.reset()
         else:
             # Velocity Control =================================
-            # ax = self.Vx_PI_Control(self.V_x_desired)
             ax = self.Acceleration_x
             self.velocity_x += ax * dt
 
