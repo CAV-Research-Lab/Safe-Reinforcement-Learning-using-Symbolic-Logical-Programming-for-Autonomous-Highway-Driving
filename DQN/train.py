@@ -1,7 +1,6 @@
 # =====================================================================
-# Date  : 5 May 2023
+# Date  : 15 Nov 2020
 # Title : train
-# Creator : Iman Sharifi
 # =====================================================================
 
 from decimal import Decimal
@@ -17,10 +16,13 @@ import math
 import numpy as np
 import time
 from utils import get_distance, get_lane
-from torch.utils.tensorboard import SummaryWriter
+
 from pyswip import Prolog
 
 prolog = Prolog()
+
+from torch.utils.tensorboard import SummaryWriter
+
 show_video = 1
 N_EPISODES = 20000  # number of episodes for training
 WEIGHT_SAVE_STEPS = 50  # save weights after this number of steps
@@ -34,7 +36,6 @@ def create_frame_list(map_id):
     recordingMeta = csv.DictReader(open("../HighD/Metas/" + str(map_id) + '_recordingMeta.csv')).__next__()
     tracks = csv.DictReader(open("../HighD/Tracks/" + str(map_id) + '_tracks.csv'))
     # tracksMeta = csv.DictReader(open("../HighD/Statics/" + str(map_id) + '_tracksMeta.csv'))
-
     # print(recordingMeta)
 
     frame_list = []
@@ -109,7 +110,7 @@ if __name__ == '__main__':
     writer = SummaryWriter(log_dir="m_train/{}".format(Name))
 
     # the AgentCar object
-    agent = AgentCar(width=15, height=8, lane=4, speed=72, direction=1)
+    agent = AgentCar(width=15, height=8, lane=5, speed=72, direction=1)
 
     # number of episodes
     n_episodes = N_EPISODES
@@ -138,7 +139,7 @@ if __name__ == '__main__':
     pygame.display.set_caption('Highway')
 
     # create list for rewards
-    R_lc, R_c, R_out, R_end, R_t, R_sum = [], [], [], [], [], []
+    R_lc, R_v, R_c, R_out, R_end, R_t, R_avg = [], [], [], [], [], [], []
     n_hits = []
     steps, Steps = 0, []
 
@@ -151,6 +152,8 @@ if __name__ == '__main__':
         vehicles_id, vehicles_lane, vehicles_pos, vehicles_vel, X_vel = get_car_list(frame)
         vehicle_pos_pygame = [pygame.Rect(rect) for rect in vehicles_pos]
         # vehicles_vel.append((agent.velocity_x, agent.velocity_y))
+        neighboring_vehicles_pos = []
+        neighboring_vehicles_pos_pygame = []
 
         if show_video == 1:
             for event in pygame.event.get():
@@ -166,6 +169,12 @@ if __name__ == '__main__':
                     d = get_distance([x_ego, y_ego], [v_pos[0], v_pos[1]])
                     if d < 70 and 4 <= int(vLane) <= 6:
                         pygame.draw.rect(screen, RED, v_pos_pygame)
+
+                        # extract the adjacent vehicles positions
+                        neighboring_vehicles_pos.append(v_pos)
+                        neighboring_vehicles_pos_pygame.append(v_pos_pygame)
+
+                        # Center of rectangle for x, y positions
                         X_pos = v_pos[0] + v_pos[2] / 2
                         Y_pos = v_pos[1] + v_pos[3] / 2
 
@@ -184,12 +193,25 @@ if __name__ == '__main__':
             # reconsult the prolog file to load clauses for finding safe actions
             # you should add 'reconsult' command like 'consult' in pyswip file -> find prolog.py in pyswip installed directory
             prolog.reconsult('prolog files/choosing_actions_highway.pl')
-
-            #  extract the longitudinal acceleration from prolog
+            Action = list(prolog.query('safe_actions(Action)'))
+            L = list(prolog.query('possible_actions(Actions)'))
+            safeActions = []
+            for action in L[0]['Actions']:
+                safeActions.append(str(action))
+            # Desired_velocity_x = list(prolog.query('desired_velocity_x(Vd_x)'))
             Acceleration_x = list(prolog.query('acceleration_x(Ax)'))
 
-            # set the longitudinal acceleration to agent
+            # print(f">>> Safe action: {Action[0]['Action']}.")
+            print(f">>> Safe action set: {safeActions}.")
+
+            agent.safe_action = Action[0]['Action']
+            agent.possible_actions = safeActions
+            # agent.possible_actions = ['lane_keeping','left_lane_change','right_lane_change']
+
+            # agent.V_x_desired = Desired_velocity_x[0]['Vd_x']
             agent.Acceleration_x = Acceleration_x[0]['Ax']
+            # print(f">>> Desired Velocity x: {Desired_velocity_x[0]['Vd_x']}.", end="\n")
+            # print(list(prolog.query('listing(vehicle)')),end='\n\n')
 
             EgoRect, EgoColor = agent.rect, agent.color
             pygame.draw.rect(screen, EgoColor, EgoRect)
@@ -198,7 +220,8 @@ if __name__ == '__main__':
             # time.sleep(1)
 
         # update the agent car
-        done, score = agent.update(timestep, vehicle_pos_pygame, vehicles_pos, X_vel, train=True)
+        done, score = agent.update(timestep, neighboring_vehicles_pos_pygame, neighboring_vehicles_pos, X_vel,
+                                   train=True)
 
         # end the episode if done
         if done:
@@ -232,14 +255,16 @@ if __name__ == '__main__':
 
             # Append rewards into lists
             R_lc.append(agent.lane_change_reward_sum)
+            R_v.append(agent.velocity_reward_sum)
             R_c.append(agent.collision_reward_sum)
             R_out.append(agent.out_of_highway_reward_sum)
             R_end.append(agent.end_of_lane_reward_sum)
             R_t.append(agent.time_waste_reward_sum)
 
-            r_sum = agent.lane_change_reward_sum + agent.collision_reward_sum + agent.out_of_highway_reward_sum \
-                    + agent.end_of_lane_reward_sum + agent.time_waste_reward_sum
-            R_sum.append(r_sum)
+            # r_sum = agent.lane_change_reward_sum+agent.collision_reward_sum+agent.out_of_highway_reward_sum \
+            #         +agent.end_of_lane_reward_sum+agent.time_waste_reward_sum
+
+            R_avg.append(agent.avg_rewards)
 
             # Number of hits
             n_hits.append(agent.n_hits)
@@ -250,11 +275,12 @@ if __name__ == '__main__':
             # specify column name to each list
             df['steps'] = Steps
             df['R_lc'] = R_lc
+            df['R_v'] = R_v
             df['R_c'] = R_c
             df['R_out'] = R_out
             df['R_end'] = R_end
             df['R_t'] = R_t
-            df['R_sum'] = R_sum
+            df['R_avg'] = R_avg
             df['n_hits'] = n_hits
             df['Loss'] = avg_losses
 

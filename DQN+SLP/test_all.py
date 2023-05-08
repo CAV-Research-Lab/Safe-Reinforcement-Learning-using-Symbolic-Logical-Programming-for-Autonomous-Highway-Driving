@@ -133,6 +133,8 @@ class ScenarioData():
 
             vehicle_pos_pygame = [pygame.Rect(rect) for rect in vehicles_pos]
             agent.AgentCar.max_velocity_other_cars = max(X_vel)
+            neighboring_vehicles_pos = []
+            neighboring_vehicles_pos_pygame = []
 
             x_ego, y_ego = self.agent.x, self.agent.y
 
@@ -143,8 +145,13 @@ class ScenarioData():
                     d = get_distance([x_ego, y_ego], [v_pos[0], v_pos[1]])
                     if d < 70 and 4 <= int(vLane) <= 6:
                         pygame.draw.rect(screen, RED, v_pos_pygame)
-                        X_pos = v_pos[0]+v_pos[2]/2
-                        Y_pos = v_pos[1]+v_pos[3]/2
+
+                        # extract the adjacent vehicles positions
+                        neighboring_vehicles_pos.append(v_pos)
+                        neighboring_vehicles_pos_pygame.append(v_pos_pygame)
+
+                        X_pos = v_pos[0] + v_pos[2] / 2
+                        Y_pos = v_pos[1] + v_pos[3] / 2
 
                         # Sending vehicles info to prolog
                         facts = f"vehicle(v{vId}, {vLane}, {X_pos:.4f}, {Y_pos:.4f}, {v_pos[2]:.4f}, {v_pos[3]:.4f}, {v_vel[0]:.4f}, {v_vel[1]:.4f}, 100).\n"
@@ -166,26 +173,23 @@ class ScenarioData():
             Actions = []
             for action in L[0]['Actions']:
                 Actions.append(str(action))
-
-            #  extract the longitudinal acceleration from prolog
+            # Desired_velocity_x = list(prolog.query('desired_velocity_x(Vd_x)'))
             Acceleration_x = list(prolog.query('acceleration_x(Ax)'))
 
             # print(f">>> Safe action: {Action[0]['Action']}.")
             # print(f">>> Possible actions: {Actions}.")
+            # print(f">>> Desired Velocity x: {Desired_velocity_x[0]['Vd_x']}.", end="\n")
 
-            # set the safe action for agent
             self.agent.safe_action = Action[0]['Action']
-
-            # set the safe action set for agent
             self.agent.possible_actions = Actions
-
-            # set the longitudinal acceleration to agent
+            # self.agent.V_x_desired = Desired_velocity_x[0]['Vd_x']
             self.agent.Acceleration_x = Acceleration_x[0]['Ax']
 
             i += 1
 
             # update and draw the agent
-            reset, _ = self.agent.update(timestep, vehicle_pos_pygame, vehicles_pos, X_vel, train=False)
+            reset, _ = self.agent.update(timestep, neighboring_vehicles_pos_pygame, neighboring_vehicles_pos, X_vel,
+                                         train=False)
             self.agent.draw(screen)
 
             avg_losses.append(np.average(self.agent.dq_agent.losses))

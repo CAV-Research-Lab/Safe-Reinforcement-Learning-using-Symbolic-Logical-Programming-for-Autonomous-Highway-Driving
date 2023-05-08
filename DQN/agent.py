@@ -37,10 +37,10 @@ MEM_SIZE = int(1e3)  # memory size                            ***
 BATCH_SIZE = 128  # experience the batch size
 
 # reward details
-CAR_HIT_REWARD = -300  # if hit by a car
+CAR_HIT_REWARD = -30  # if hit by a car
 END_OF_LANE_REWARD = 30  # for reaching to the end of the lane
 REWARD_LANE_CHANGE = -1  # reward for unnecessary lane change
-REWARD_OUT_OF_LEGAL_LANES = -300  # reward for getting out of the highway lanes
+REWARD_OUT_OF_LEGAL_LANES = -30  # reward for getting out of the highway lanes
 REWARD_TIME_WASTE = -0.1  # reward for wasting time
 # the car in front is away from the agent than this amount
 # but agent change the lane it is a unnecessary lane change
@@ -71,13 +71,13 @@ class AgentCar:
     def __init__(self, width=15, height=8, lane=5, speed=72, direction=1, eps=0.1):
 
         self.dt = TIME_STEP
-        self.init_lane = lane  # initial lane
         self.init_speed = speed  # initial speed
         self.width = width  # width of the car
         self.height = height  # height
         self.direction = direction  # 1 is right, -1 left
-        self.reset()  # initial states
+        self.reset()
         self.reset_rewards()  # reset rewards
+        self.avg_rewards = 0
 
         self.n_hits = 0  # number of collision
 
@@ -107,7 +107,6 @@ class AgentCar:
     # =====================================================================
     # restart
     def reset(self):
-        self.lane = random.randint(3, 5)
 
         # get the initial x value
         if self.direction == 1:
@@ -116,8 +115,8 @@ class AgentCar:
             self.x = 1000
 
         # get the initial y value
+        self.lane = random.randint(3, 5)
         self.y = LANES_Y[self.lane] - 5
-        self.lane = get_lane(self.y, LANES_Y)
 
         # reset states
         self.velocity_x = random.randint(40, 80)
@@ -148,12 +147,45 @@ class AgentCar:
         self.previous_action = 'lane_keeping'
         self.action_repeat = 0
 
+    def reset_lane(self, car_list2):
+        # get the initial y value
+        self.lane = self.init_lane(car_list2)
+        self.y = LANES_Y[self.lane] - 5
+
     def reset_rewards(self):
         self.lane_change_reward_sum = 0
+        self.velocity_reward_sum = 0
         self.collision_reward_sum = 0
         self.out_of_highway_reward_sum = 0
         self.end_of_lane_reward_sum = 0
         self.time_waste_reward_sum = 0
+
+    def init_lane(self, car_list2):
+        lane = random.randint(3, 5)
+        self.y = LANES_Y[lane] - 5
+        i = 0
+        while i < 10:
+            if self.overlap(car_list2) == 1:
+                lane = random.randint(3, 5)
+            else:
+                break
+            i += 1
+        return lane
+
+    def overlap(self, car_list2):
+        W, H = self.width, self.height
+        X = self.x - int(W / 2)
+        Y = self.y - int(H / 2)
+        ego_rect = pygame.Rect(X, Y, W, H)
+
+        temp = 0
+        for vehicle_rect in car_list2:
+            intersection_rect = ego_rect.clip(vehicle_rect)
+            if intersection_rect.w > 0 and intersection_rect.h > 0:
+                temp = 1
+                break
+
+        return temp
 
     # =====================================================================
     # execute action (y control)
@@ -261,6 +293,10 @@ class AgentCar:
         #     reward_out = REWARD_OUT_OF_LEGAL_LANES
         return reward_out, done
 
+    def get_velocity_reward(self):
+        reward_velocity = 0.1 * (self.velocity_x - 120)
+        return reward_velocity
+
     # =====================================================================
     # update the agent's car each frame
     # return = done, score
@@ -291,14 +327,18 @@ class AgentCar:
 
         # Reward function =======================================
         reward_lane_change = self.get_lane_change_reward(dqn_action)
+        reward_velocity = self.get_velocity_reward()
         reward_collision, done1 = self.get_collision_reward(car_list2)
         reward_out, done2 = self.get_out_of_legal_lanes_reward(dqn_action)
         reward_end, done3 = self.get_end_of_lane_reward()
         reward_time = REWARD_TIME_WASTE
-        reward = reward_lane_change + reward_collision + reward_out + reward_end + reward_time
+
+        # reward = reward_lane_change + reward_collision + reward_out + reward_end + reward_time
+        reward = reward_lane_change + reward_velocity
 
         # Sum of individual rewards
         self.lane_change_reward_sum += reward_lane_change
+        self.velocity_reward_sum += reward_velocity
         self.collision_reward_sum += reward_collision
         self.out_of_highway_reward_sum += reward_out
         self.end_of_lane_reward_sum += reward_end
@@ -328,8 +368,10 @@ class AgentCar:
                 avg_reward = np.average(self.rewards)
             print(f'Epsilon:{truncate(self.dq_agent.eps, 3)}, Avg-reward: {truncate(avg_reward, 2)}')
 
+            self.avg_rewards = avg_reward
             self.terminal_count += 1
             self.reset()
+            self.reset_lane(car_list2)
         else:
             # Velocity Control =================================
             ax = self.Acceleration_x
