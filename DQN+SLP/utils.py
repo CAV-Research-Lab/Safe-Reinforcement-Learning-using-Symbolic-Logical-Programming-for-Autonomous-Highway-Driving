@@ -16,6 +16,22 @@ PLOT_INTERPOLATE = 10
 def get_distance( p1, p2 ):
     return math.sqrt( (p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2 )
 
+def get_lane(y, LANES_Y):
+
+    if LANES_Y[0] <= y <= LANES_Y[1]:
+        return 1
+    elif LANES_Y[1]< y <=LANES_Y[2]:
+        return 2
+    elif LANES_Y[2]< y <=LANES_Y[3]:
+        return 3
+    elif       65  < y <=LANES_Y[4]:
+        return 4
+    elif LANES_Y[4]< y <=LANES_Y[5]:
+        return 5
+    elif LANES_Y[5]< y <=LANES_Y[6]:
+        return 6
+    else:
+        return 0
 
 # =====================================================================
 def truncate(number, decimals=0):
@@ -88,33 +104,3 @@ def showCars(pygame_rectlist):
 
     pygame.quit()
 
-def get_lane(y, LANES_Y):
-    if y <= LANES_Y[0]:
-        return 1
-    elif LANES_Y[0]< y <=LANES_Y[1]:
-        return 2
-    elif LANES_Y[1]< y <=LANES_Y[2]:
-        return 3
-    elif LANES_Y[2]< y <=LANES_Y[3]:
-        return 4
-    elif LANES_Y[3]< y <=LANES_Y[4]:
-        return 5
-    elif LANES_Y[4]< y:
-        return 6
-    
-def get_ego_lane(y, LANES_Y):
-    x = 3
-    if y <= LANES_Y[0]-x:
-        return 1
-    elif LANES_Y[0]+x < y <= LANES_Y[1]-x:
-        return 2
-    elif LANES_Y[1]+x< y <=LANES_Y[2]-x:
-        return 3
-    elif LANES_Y[2]+x< y <=LANES_Y[3]-x:
-        return 4
-    elif LANES_Y[3]+x< y <=LANES_Y[4]-x:
-        return 5
-    elif LANES_Y[4]+x< y <=LANES_Y[5]-x:
-        return 6
-    else:
-        return 0

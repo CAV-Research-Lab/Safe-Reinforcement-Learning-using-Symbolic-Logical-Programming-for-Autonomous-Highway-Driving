@@ -14,7 +14,7 @@ device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
 # dqn
 FC1_UNITS = 256  # fc 1 units
 FC2_UNITS = 256  # fc layer 2 units
-TARGET_UPDATE = 200  # number of steps to update the target
+TARGET_UPDATE = 100  # number of steps to update the target
 
 
 # =====================================================================
@@ -28,15 +28,14 @@ class DQN(nn.Module):
     #   fc1_units  = fc1 units
     #   fc2_units  = fc2 units
     #   n_actions  = numver of actions
-    def __init__(self, lr, state_size, fc1_units, fc2_units, n_actions,
-                 weight_file_path="weights/best_weights_25.0_20230506-210352"):
+    def __init__(self, lr, state_size, fc1_units, fc2_units, n_actions, weight_file_path):
         super(DQN, self).__init__()
 
         # initialize
         self.state_size = state_size
-        self.fc1 = nn.Linear(state_size, fc1_units)  # layer 1
-        self.fc2 = nn.Linear(fc1_units, fc2_units)  # layer 2
-        self.fc3 = nn.Linear(fc2_units, n_actions)  # layer 3
+        self.fc1 = nn.Linear(state_size, fc1_units)     # layer 1
+        self.fc2 = nn.Linear(fc1_units, fc2_units)      # layer 2
+        self.fc3 = nn.Linear(fc2_units, n_actions)      # layer 3
 
         # the opimizer
         self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
@@ -47,12 +46,13 @@ class DQN(nn.Module):
 
         self.weight_file_path = weight_file_path
 
-        try:  # load from  the saved weight file if available
+        # load from  the saved weight file if available
+        try:  
             self.load_state_dict(torch.load(weight_file_path))
-            print("weights are loaded")
+            print("The best weight file have been loaded.")
 
         except:
-            print("could not load the weight file")
+            print("We could not load the best weight file.")
 
     # =====================================================================
     # forward function
@@ -118,7 +118,7 @@ class Memory:
 class DQAgent:
 
     # =====================================================================
-    # constructor
+    #   constructor
     #   lr         = learnint rate
     #   gamma      = discount factor
     #   eps        = initial epsilon value
@@ -129,7 +129,7 @@ class DQAgent:
     #   n_actions  =  no of actions
     #   target_update = number of steps to update the target net
     def __init__(self, lr, gamma, eps, eps_final, eps_dec,
-                 mem_size, state_size, batch_size, n_actions):
+                 mem_size, state_size, batch_size, n_actions, weight_file_path=''):
 
         # initialize
         self.gamma = gamma
@@ -144,10 +144,10 @@ class DQAgent:
         self.target_update = TARGET_UPDATE
 
         # the policy net
-        self.net = DQN(lr, state_size, FC1_UNITS, FC2_UNITS, n_actions)
+        self.net = DQN(lr, state_size, FC1_UNITS, FC2_UNITS, n_actions, weight_file_path)
 
         # the target net
-        self.target_net = DQN(lr, state_size, FC1_UNITS, FC2_UNITS, n_actions)
+        self.target_net = DQN(lr, state_size, FC1_UNITS, FC2_UNITS, n_actions, weight_file_path)
         self.target_net.load_state_dict(self.net.state_dict())
 
         # the memory
@@ -156,7 +156,7 @@ class DQAgent:
         # number of learning steps
         self.step_count = 0
 
-        # store losse of each step
+        # store losses of each step
         self.losses = []
 
         # Possible actions
@@ -164,18 +164,21 @@ class DQAgent:
 
     # =====================================================================
     # get the next actions for a state
-    def next_action(self, state):
+    def next_action(self, state, safe):
 
-        # Extracting safe action set
-        # print(f'\nSafe Action Set: {self.possible_actions}')
-        indexes = []
-        for action in self.possible_actions:
-            if action == 'lane_keeping':
-                indexes.append(0)
-            elif action == 'left_lane_change':
-                indexes.append(1)
-            else:
-                indexes.append(2)
+        if safe:
+            # assign [0, 1, 2] to [lane_keeping, left_lane_change, right_lane_change] in the safe action set
+            indexes = []
+            for action in self.possible_actions:
+                if action == 'lane_keeping':
+                    indexes.append(0)
+                elif action == 'left_lane_change':
+                    indexes.append(1)
+                else:
+                    indexes.append(2)
+        else:
+            # DQN can choose both safe and unsafe actions
+            indexes = [0, 1, 2]
 
         # do the epsilon check
         if random.random() > self.eps:  # predict next action with the policy net
@@ -186,9 +189,7 @@ class DQAgent:
             # return torch.argmax(actions).item()
             return indexes[actions.index(max(actions))]
         else:
-            # the random next action
-            # return random.randint(0, self.n_actions-1)
-            # return random.randint(0, len(self.possible_actions)-1)
+            # the next random action
             return random.choice(indexes)
 
     # =====================================================================
