@@ -33,6 +33,24 @@ def get_lane(y, LANES_Y):
     else:
         return 0
 
+def get_decayed_param(initial_value=0.001, decay_value=1e-7, final_value=0.00001, episode=0):
+
+    param = initial_value - episode*decay_value
+
+    if param < final_value:
+        param = final_value
+
+    return param
+
+def get_decayed_param1(param=0.001, decay_value=1e-7, final_value=0.00001):
+
+    param = param - decay_value
+
+    if param < final_value:
+        param = final_value
+
+    return param
+
 # =====================================================================
 def truncate(number, decimals=0):
     """

@@ -1,6 +1,7 @@
 # =====================================================================
-# Date  : 14 Nov 2020
+# Date  : 20 May 2023
 # Title : DQN
+# Creator : Iman Sharifi
 # =====================================================================
 
 import torch
@@ -8,13 +9,27 @@ from torch import nn
 import numpy as np
 from collections import deque
 import random
+from utils import get_decayed_param
 
 device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
+
+# dqn parameters
+STATE_SIZE = 10
+N_ACTIONS = 3
+LEARNING_RATE = 0.001  # learning rate
+LEARNING_RATE_FINAL = 0.00001 # final learning rate
+LEARNING_RATE_DECAY = 5e-7 # learning rate decay 
+GAMMA = 0.995  # discount factor
+EPS = 0.1  # initial exploration rate
+EPS_FINAL = 0.001  # final exploration rate
+EPS_DECAY = 5e-5  # exploration rate decay
+MEM_SIZE = int(1e4)  # memory size
+BATCH_SIZE = 128  # experience the batch size
 
 # dqn
 FC1_UNITS = 256  # fc 1 units
 FC2_UNITS = 256  # fc layer 2 units
-TARGET_UPDATE = 100  # number of steps to update the target
+TARGET_UPDATE = 200  # number of steps to update the target
 
 
 # =====================================================================
@@ -28,17 +43,18 @@ class DQN(nn.Module):
     #   fc1_units  = fc1 units
     #   fc2_units  = fc2 units
     #   n_actions  = numver of actions
-    def __init__(self, lr, state_size, fc1_units, fc2_units, n_actions, weight_file_path):
+    def __init__(self, state_size, fc1_units, fc2_units, n_actions, weight_file_path):
         super(DQN, self).__init__()
 
         # initialize
+        self.lr =  LEARNING_RATE
         self.state_size = state_size
         self.fc1 = nn.Linear(state_size, fc1_units)     # layer 1
         self.fc2 = nn.Linear(fc1_units, fc2_units)      # layer 2
         self.fc3 = nn.Linear(fc2_units, n_actions)      # layer 3
 
         # the opimizer
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
 
         # the loss
         self.loss = nn.MSELoss()
@@ -125,33 +141,30 @@ class DQAgent:
     #   eps_final  = the final value of the epsilon (minimum)
     #   mem_size   = capacity of the memory
     #   state_size = number of state variables
-    #   batch_size = size of the btach of experience to fit the model
+    #   batch_size = size of the batch of experience to fit the model
     #   n_actions  =  no of actions
     #   target_update = number of steps to update the target net
-    def __init__(self, lr, gamma, eps, eps_final, eps_dec,
-                 mem_size, state_size, batch_size, n_actions, weight_file_path=''):
+    def __init__(self, weight_file_path=''):
 
         # initialize
-        self.gamma = gamma
-        self.eps = eps
-        self.eps_final = eps_final
-        self.eps_dec = eps_dec
-        self.batch_size = batch_size
-        self.state_size = state_size
-        self.mem_size = mem_size
-        self.lr = lr
-        self.n_actions = n_actions
+        self.state_size = STATE_SIZE
+        self.n_actions = N_ACTIONS
+        self.eps = EPS
+        self.gamma = GAMMA
+        self.batch_size = BATCH_SIZE
+        self.mem_size = MEM_SIZE
+
         self.target_update = TARGET_UPDATE
 
         # the policy net
-        self.net = DQN(lr, state_size, FC1_UNITS, FC2_UNITS, n_actions, weight_file_path)
+        self.net = DQN(self.state_size, FC1_UNITS, FC2_UNITS, self.n_actions, weight_file_path)
 
         # the target net
-        self.target_net = DQN(lr, state_size, FC1_UNITS, FC2_UNITS, n_actions, weight_file_path)
+        self.target_net = DQN(self.state_size, FC1_UNITS, FC2_UNITS, self.n_actions, weight_file_path)
         self.target_net.load_state_dict(self.net.state_dict())
 
         # the memory
-        self.memory = Memory(mem_size)
+        self.memory = Memory(self.mem_size)
 
         # number of learning steps
         self.step_count = 0
@@ -192,9 +205,21 @@ class DQAgent:
             # the next random action
             return random.choice(indexes)
 
+    def update_decayed_params(self, episode):
+        # update learning rate
+        lr = get_decayed_param(initial_value=LEARNING_RATE, decay_value=LEARNING_RATE_DECAY, final_value=LEARNING_RATE_FINAL, episode=episode)
+
+        # update the exploration rate
+        eps = get_decayed_param(initial_value=EPS, decay_value=EPS_DECAY, final_value=EPS_FINAL, episode=episode)
+
+        return lr, eps
+        
+
+
     # =====================================================================
     # learn method
-    def learn(self):
+    def learn(self, episode):
+
         # check the memory
         if len(self.memory) < self.batch_size:
             return
@@ -239,9 +264,8 @@ class DQAgent:
 
         self.step_count += 1
 
-        # reduce epsilon
-        if self.eps > self.eps_final:
-            self.eps -= self.eps_dec
-
-        else:
-            self.eps = self.eps_final
+        # update important parameters
+        lr, eps = self.update_decayed_params(episode)
+        self.net.lr = lr
+        self.target_net.lr = lr
+        self.eps = eps

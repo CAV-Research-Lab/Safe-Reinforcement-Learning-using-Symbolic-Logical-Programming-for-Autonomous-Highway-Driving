@@ -18,17 +18,6 @@ TIME_STEP = 1.0 / 25.0
 LANE_WIDTH = 10
 semi_lane_width = LANE_WIDTH / 2
 
-# dqn parameters
-STATE_SIZE = 10
-N_ACTIONS = 3
-LEARNING_RATE = 0.001  # learning rate
-GAMMA = 0.995  # discount factor
-EPS = 0.1  # initial epsilon
-EPS_FINAL = 0.001  # final epsilon
-EPS_DECAY = 8e-7  # epsilon decay
-MEM_SIZE = int(1e3)  # memory size
-BATCH_SIZE = 32  # experience the batch size
-
 # reward details
 CAR_HIT_REWARD = -1000  # if hit by a car
 END_OF_LANE_REWARD = 100  # for reaching to the end of the lane
@@ -52,7 +41,7 @@ class AgentCar:
 
     REWARDS = -w1*(DesiredState-State)**2 - w2*(DesiredAction-Action)**2 - w3*CollisionPunishment - w4*OutOfHighwayPunishment
     """
-    def __init__(self, width=15, height=8, direction=1, eps=EPS, weight_file_path=''):
+    def __init__(self, width=15, height=8, direction=1, weight_file_path=''):
 
         self.dt = TIME_STEP
         self.width = width  # width of the car
@@ -63,9 +52,7 @@ class AgentCar:
         self.color = (0, 255, 0)
 
         # initialize the DQN agent
-        self.dq_agent = DQAgent(lr=LEARNING_RATE, gamma=GAMMA, eps=eps, eps_final=EPS_FINAL,
-                                eps_dec=EPS_DECAY, mem_size=MEM_SIZE, state_size=STATE_SIZE,
-                                batch_size=BATCH_SIZE, n_actions=N_ACTIONS, weight_file_path=weight_file_path)
+        self.dq_agent = DQAgent(weight_file_path=weight_file_path)
 
         # Safe action derived from Prolog
         self.safe_action = 0
@@ -395,7 +382,7 @@ class AgentCar:
     # dt                   = frame time
     # target_vehicles_list = list of the detected vehicles by the radar installed on the Autonomous Vehicle
     # train                = enable or disable learning
-    def update(self, dt, target_vehicles_list, safe=False, train=False):
+    def update(self, dt, episode, target_vehicles_list, safe=False, train=False):
         done = False
         learn = train
 
@@ -467,7 +454,7 @@ class AgentCar:
             score = self.score
 
             # Update the net weights ============================
-            self.dq_agent.learn()
+            self.dq_agent.learn(episode)
 
         self.rewards.append(reward)
 

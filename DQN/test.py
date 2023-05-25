@@ -30,14 +30,23 @@ TRAIN = False  # 1 for train and 0 for test
 N_EPISODES = 100  # number of episodes for training
 N_EPOCHS = 5  # each epoch is 420 meters
 WEIGHT_SAVE_STEPS = 20  # save weights after this number of steps
-EPSILON = 0  # initial rate of taking a random action
 DIRECTION = 1  # highway direction [1 for left to right & -1 for right to left]
-OUTPUT_EXCEL_FILE = 'dqn_exported_data_test.xlsx'
-BEST_WEIGHT_FILE = 'weights/weights_20230521-132456'
+BEST_WEIGHT_FILE = 'weights/weights_20230524-223147'
 DATASET_DIRECTORY = '../dataset/'
-RADAR_RENGE = 70 # PIXEL
+if SAFE:
+    if TRAIN:
+        OUTPUT_EXCEL_FILE = 'dqn_slp_train_data.xlsx'
+    else:
+        OUTPUT_EXCEL_FILE = 'dqn_slp_test_data.xlsx'
+else:
+    if TRAIN:
+        OUTPUT_EXCEL_FILE = 'dqn_train_data.xlsx'
+    else:
+        OUTPUT_EXCEL_FILE = 'dqn_test_data.xlsx'
+
 
 # ==================================================================
+RADAR_RENGE = 70 # PIXEL
 LANES_Y = [10, 25, 36, 48, 81, 93, 108, 120]
 timestr = time.strftime("%Y%m%d-%H%M%S")
 
@@ -110,7 +119,7 @@ if __name__ == '__main__':
 
     # ===============================================================
     # initialize the AgentCar object
-    agent = AgentCar(width=15, height=8, direction=DIRECTION, eps=EPSILON, weight_file_path=BEST_WEIGHT_FILE)
+    agent = AgentCar(width=15, height=8, direction=DIRECTION, weight_file_path=BEST_WEIGHT_FILE)
 
     # Pygame Settings ===============================================
     RED = (255, 0, 0)
@@ -224,7 +233,7 @@ if __name__ == '__main__':
         clock.tick(40)
 
         # update the agent car
-        done, score = agent.update(timestep, neighboring_vehicles_pos, safe=SAFE, train=TRAIN)
+        done, score = agent.update(timestep, episode, neighboring_vehicles_pos, safe=SAFE, train=TRAIN)
 
         # end the episode if done 
         if done or agent.epoch == N_EPOCHS:
@@ -288,7 +297,7 @@ if __name__ == '__main__':
 
             # Print important data
             print(
-                f'Episode:{episode + 1}/{N_EPISODES}| R_sum:{agent.cumulative_reward:.4f}| R_avg:{avg_reward:.4f}| Loss:{avg_loss:.4f}| LaneChange:{int(agent.n_lane_changes)}| Hits:{agent.n_hits}| Eps:{agent.dq_agent.eps:.4f}| Traveled_distance: {agent.traveled_distance:.4f}| Epoch: {agent.epoch}',
+                f'Episode:{episode + 1}/{N_EPISODES}| R_sum:{agent.cumulative_reward:.4f}| R_avg:{avg_reward:.4f}| Loss:{avg_loss:.4f}| LaneChange:{int(agent.n_lane_changes)}| Hits:{agent.n_hits}| LR: {agent.dq_agent.net.lr:.5f}| Eps:{agent.dq_agent.eps:.4f}| Traveled_distance: {agent.traveled_distance:.4f}| Epoch: {agent.epoch}',
                 end="\n\n")
 
             # Save dataframe to excel
