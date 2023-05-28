@@ -24,8 +24,9 @@ END_OF_LANE_REWARD = 100  # for reaching to the end of the lane
 REWARD_LANE_CHANGE = -10  # reward for unnecessary lane change
 REWARD_OUT_OF_LEGAL_LANES = -1000  # reward for getting out of the highway lanes
 REWARD_TIME_WASTE = 1  # reward for wasting time
-LANE_CHANGE_STEPS = 5  # time steps required for state transition (lane change)
-
+LANE_CHANGE_STEPS = 8  # time steps required for state transition (lane change)
+MAX_SPEED = 120
+MAX_LANE = 6
 
 # =====================================================================
 # the car class for the DQN
@@ -47,12 +48,12 @@ class AgentCar:
         self.width = width  # width of the car
         self.height = height  # height
         self.direction = direction  # 1 is left-to-right, -1 for right-to-left
-        self.reset_episode()
-        self.rect = pygame.Rect(self.x - int(width / 2), self.y - int(height / 2), self.width, self.height)
-        self.color = (0, 255, 0)
 
         # initialize the DQN agent
         self.dq_agent = DQAgent(weight_file_path=weight_file_path)
+        self.reset_episode()
+        self.rect = pygame.Rect(self.x - int(width / 2), self.y - int(height / 2), self.width, self.height)
+        self.color = (0, 255, 0)
 
         # Safe action derived from Prolog
         self.safe_action = 0
@@ -92,6 +93,9 @@ class AgentCar:
         self.end_of_lane_reward_sum = 0
         self.time_waste_reward_sum = 0
 
+        # Reset loss list in each episode
+        self.dq_agent.losses = []
+
         # the agent is allowed to choose an new action
         self.take_new_action = True
 
@@ -101,7 +105,7 @@ class AgentCar:
         self.state = [1, 1, 1, 1, 1, 1, 1, 1, 0.8, 0.8]
 
         # state and action of  the previous frame
-        self.previous_state = None
+        self.previous_state = [1, 1, 1, 1, 1, 1, 1, 1, self.lane/MAX_LANE, self.velocity_x/MAX_SPEED]
 
         # Action delay parameters
         self.previous_action = 0
@@ -192,11 +196,9 @@ class AgentCar:
 
                 if action == 'right_lane_change' and lane < 6:
                     y_desired = LANES_Y[lane + 1] - semi_lane_width
-                    self.n_lane_changes += 1
 
                 elif action == 'left_lane_change' and lane > 4:
                     y_desired = LANES_Y[lane - 1] - semi_lane_width
-                    self.n_lane_changes += 1
 
                 else:
                     y_desired = LANES_Y[lane] - semi_lane_width
@@ -205,11 +207,9 @@ class AgentCar:
 
                 if action == 'right_lane_change' and lane > 1:
                     y_desired = LANES_Y[lane - 1] - semi_lane_width
-                    self.n_lane_changes += 1
 
                 elif action == 'left_lane_change' and lane < 3:
                     y_desired = LANES_Y[lane + 1] - semi_lane_width
-                    self.n_lane_changes += 1
 
                 else:
                     y_desired = LANES_Y[lane] - semi_lane_width
@@ -259,8 +259,7 @@ class AgentCar:
     def get_lane_change_reward(self, action):
 
         if action == 'left_lane_change' or action == 'right_lane_change':
-            self.n_lane_changes += (1 / LANE_CHANGE_STEPS)
-            return REWARD_LANE_CHANGE / LANE_CHANGE_STEPS
+            return REWARD_LANE_CHANGE
         
         else:
             return 0
@@ -281,7 +280,7 @@ class AgentCar:
 
                 if intersection_rect.w > 0 and intersection_rect.h > 0:
                     self.n_hits += 1
-                    reward_collision = CAR_HIT_REWARD
+                    reward_collision = CAR_HIT_REWARD * (1-0.8*self.x/ROAD_LENGTH)
                     done = True
 
         return reward_collision, done
@@ -321,7 +320,7 @@ class AgentCar:
 
             else:
                 done = True
-                reward_out = REWARD_OUT_OF_LEGAL_LANES
+                reward_out = REWARD_OUT_OF_LEGAL_LANES*(1-0.8*self.x/ROAD_LENGTH)
 
         else:
             Border1, Border2 = LANES_Y[0], LANES_Y[3]
@@ -383,80 +382,87 @@ class AgentCar:
     # target_vehicles_list = list of the detected vehicles by the radar installed on the Autonomous Vehicle
     # train                = enable or disable learning
     def update(self, dt, episode, target_vehicles_list, safe=False, train=False):
-        done = False
-        learn = train
+        done, done1, done2, done3 = False, False,False, False
 
         # print(f"Ego position: X = {self.x:.4f}, Y = {self.y:.4f}, Lane = {get_lane(self.y, LANES_Y)}.")
         # print(f"Ego Velocity: Vx = {self.velocity_x:.4f}, Vy = {self.velocity_y:.4f}, Lane = {get_lane(self.y, LANES_Y)}.")
-        # get distances to surrounding cars
-        state = self.state
 
         # Safe action set
         self.dq_agent.possible_actions = self.possible_actions
 
         # (Safe) DQN Action =====================================
         if self.take_new_action:
+            # get distances to surrounding cars
+            state = self.state
             action = self.dq_agent.next_action(state, safe)
+            learn = train
+
             self.previous_action = action  # Save previous action
-            self.action_repeat = 0
+            self.previous_state = state   # Save previous state
 
         else:
             action = self.previous_action
+            state = self.previous_state
 
         # Execute a time delay to change the lane completely
         if action != 0 and self.action_repeat < LANE_CHANGE_STEPS:
-            # print("Changing lane ...")
+            if self.action_repeat == 0:
+                self.n_lane_changes += 1
+
             self.take_new_action = False
+            state = self.previous_state
             action = self.previous_action
+            learn = False
 
             self.action_repeat += 1
             # Reset action repeat
             if self.action_repeat == LANE_CHANGE_STEPS:
+                learn = train
                 self.take_new_action = True
+                self.action_repeat = 0
 
         # print(learn)
         # Map [0, 1, 2] to [lane_keeping, left_lane_change, right_lane_change]
         symbolic_action = self.translate_action(action)
 
-        # Reward subfunctions =======================================
-        reward_lane_change = self.get_lane_change_reward(symbolic_action)
-        reward_velocity = self.get_velocity_reward()
-        reward_collision, done1 = self.get_collision_reward(target_vehicles_list)
-        reward_out, done2 = self.get_out_of_legal_lanes_reward()
-        reward_end, done3 = self.get_end_of_lane_reward()
-        reward_distance = self.get_distance_reward()
-        lane_reward = self.get_lane_reward()
-        reward_time = REWARD_TIME_WASTE
-
-        # Main reward function
-        reward = self.new_reward(symbolic_action) + reward_collision + reward_out + reward_end
-
-        # Sum of individual rewards
-        self.lane_change_reward_sum += reward_lane_change
-        self.velocity_reward_sum += reward_velocity
-        self.distance_reward_sum += reward_distance
-        self.collision_reward_sum += reward_collision
-        self.out_of_highway_reward_sum += reward_out
-        self.end_of_lane_reward_sum += reward_end
-        self.time_waste_reward_sum += reward_time
-
-        self.cumulative_reward += reward
-
         # Learning Process ======================================
         # if learn is enabled
         if learn:
 
-            if self.previous_state is not None:
-                self.dq_agent.memory.push(self.previous_state, state, self.previous_action, reward, done3)
+            # Reward subfunctions =======================================
+            reward_lane_change = self.get_lane_change_reward(symbolic_action)
+            reward_velocity = self.get_velocity_reward()
+            reward_collision, done1 = self.get_collision_reward(target_vehicles_list)
+            reward_out, done2 = self.get_out_of_legal_lanes_reward()
+            reward_end, done3 = self.get_end_of_lane_reward()
+            reward_distance = self.get_distance_reward()
+            lane_reward = self.get_lane_reward()
+            reward_time = REWARD_TIME_WASTE
 
-            self.previous_state = state
-            self.score += reward
-            score = self.score
+            # Main reward function
+            # reward = self.new_reward(symbolic_action) + reward_collision + reward_out + reward_end
+            reward = reward_lane_change + reward_velocity + reward_distance + reward_collision + reward_out + reward_end
+
+            # Sum of individual rewards
+            self.lane_change_reward_sum += reward_lane_change
+            self.velocity_reward_sum += reward_velocity
+            self.distance_reward_sum += reward_distance
+            self.collision_reward_sum += reward_collision
+            self.out_of_highway_reward_sum += reward_out
+            self.end_of_lane_reward_sum += reward_end
+            self.time_waste_reward_sum += reward_time
+
+            self.cumulative_reward += reward
+
+            done = done1 or done2 or done3
+
+            if self.previous_state is not None:
+                self.dq_agent.memory.push(self.previous_state, state, self.previous_action, reward, done)
 
             # Update the net weights ============================
             self.dq_agent.learn(episode)
 
-        self.rewards.append(reward)
+            self.rewards.append(reward)
 
         self.traveled_distance = self.x + self.epoch * ROAD_LENGTH
 
@@ -465,7 +471,6 @@ class AgentCar:
             self.epoch += 1
 
         # if terminal state met
-        done = done1 or done2
         if not done:
             # Velocity Control =================================
             ax = self.Vx_PI_Control(self.V_x_desired)
@@ -483,4 +488,4 @@ class AgentCar:
         # time
         self.time += dt
 
-        return done, score
+        return done1 or done2, self.cumulative_reward

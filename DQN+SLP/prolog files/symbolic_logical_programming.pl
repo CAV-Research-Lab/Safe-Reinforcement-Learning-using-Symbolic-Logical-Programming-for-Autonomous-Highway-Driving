@@ -3,7 +3,7 @@
 
 :-dynamic vehicle/8.
 
-:- ['vehicle_clauses.pl'].  % Load vehicles info from a file
+:- ['vehicles_info.pl'].  % Load vehicles info from a file
 
 % =============================================================================================
 lane(Car,Lane):-vehicle(Car,Lane,_,_,_,_,_,_).
@@ -44,180 +44,180 @@ action(lane_keeping).
 
 % =============================================================================================
 % How much is the distance between Car1 and Car2?
-distanceX(Car1,Car2,D):-vehicle(Car1,_,X1,_,W1,_,_,_),
-                        vehicle(Car2,_,X2,_,W2,_,_,_), 
+distanceX(Car1,Car2,D):-position_x(Car1,X1),width(Car1,W1),
+                        position_x(Car2,X2),width(Car2,W2), 
                         (abs(X1-X2)>0.5*(W1+W2) -> D is abs(X1-X2)-0.5*(W1+W2); D is 0).
 
-distanceY(Car1,Car2,D):-vehicle(Car1,_,_,Y1,_,H1,_,_),
-                        vehicle(Car2,_,_,Y2,_,H2,_,_), 
+distanceY(Car1,Car2,D):-position_y(Car1,Y1),height(Car1,H1),
+                        position_y(Car2,Y2),height(Car2,H2),
                         (abs(Y1-Y2)>0.5*(H1+H2) -> D is abs(Y1-Y2)-0.5*(H1+H2); D is 0).
 
 distance(Car1,Car2,D):-distanceX(Car1,Car2,Dx),
                         distanceY(Car1,Car2,Dy), 
                         D is (Dx^2+Dy^2)^0.5.
 
-relativeVelocity(Car1,Car2,RelVel):-vehicle(Car1,_,_,_,_,_,Vx1,_),
-                                    vehicle(Car2,_,_,_,_,_,Vx2,_),
+relativeVelocity(Car1,Car2,RelVel):-velocity_x(Car1,Vx1),
+                                    velocity_x(Car2,Vx2),
                                     RelVel is (Vx2-Vx1).
 
 % Adjacent cars
-neighboring_cars(Car):-distance(ego, Car, D), radar_range(R), D =< R, Car \= ego.
-%neighboring_cars2(Cars):-findall(Car, (distance(ego,Car,D),D =< 30, Car \= ego), Cars).
+target_vehicle(Car):-distance(ego, Car, D), radar_range(R), D =< R, Car \= ego.
+%target_vehicle2(Cars):-findall(Car, (distance(ego,Car,D),D =< 30, Car \= ego), Cars).
 
 % =============================================================================================
 % Relative positions of adjacent cars
-north(Car):-neighboring_cars(Car),
-            vehicle(ego,Lane1,Px1,_,_,_,_,_),
-            vehicle(Car,Lane2,Px2,_,_,_,_,_),
+front(Car):-target_vehicle(Car),
+            lane(ego,Lane1),position_x(ego,Px1),
+            lane(Car,Lane2),position_x(Car,Px2),
             Lane1 is Lane2,
             (Lane1<4,Px2<Px1;Lane1>=4,Px2>Px1),
             distanceX(ego,Car,D),D>0,!.
 
-south(Car):-neighboring_cars(Car),
-            vehicle(ego,Lane1,Px1,_,_,_,_,_),
-            vehicle(Car,Lane2,Px2,_,_,_,_,_),
+back(Car):-target_vehicle(Car),
+            lane(ego,Lane1),position_x(ego,Px1),
+            lane(Car,Lane2),position_x(Car,Px2),
             Lane1 is Lane2,
             (Lane1<4,Px2>Px1;Lane1>=4,Px2<Px1),
             distanceX(ego,Car,D),D>0,!.
 
-east(Car):-neighboring_cars(Car),
-            vehicle(ego,Lane1,_,_,_,_,_,_),
-            vehicle(Car,Lane2,_,_,_,_,_,_),
+right(Car):-target_vehicle(Car),
+            lane(ego,Lane1),
+            lane(Car,Lane2),
             distanceX(ego,Car,D),D is 0,
             (Lane1<4,Lane2 is Lane1-1;Lane1>=4,Lane2 is Lane1+1),!.
 
-west(Car):-neighboring_cars(Car),
-            vehicle(ego,Lane1,_,_,_,_,_,_),
-            vehicle(Car,Lane2,_,_,_,_,_,_),
+left(Car):-target_vehicle(Car),
+            lane(ego,Lane1),
+            lane(Car,Lane2),
             distanceX(ego,Car,D),D is 0,
             (Lane1<4,Lane2 is Lane1+1;Lane1>=4,Lane2 is Lane1-1),!.
 
-northeast(Car):-neighboring_cars(Car),
-                vehicle(ego,Lane1,Px1,_,_,_,_,_),
-                vehicle(Car,Lane2,Px2,_,_,_,_,_),
+front_right(Car):-target_vehicle(Car),
+                lane(ego,Lane1),position_x(ego,Px1),
+                lane(Car,Lane2),position_x(Car,Px2),
                 distanceX(ego,Car,D),D > 0,
                 (Lane1<4,Lane2 is Lane1-1,Px2 < Px1;Lane1>=4,Lane2 is Lane1+1,Px2 > Px1),!.
 
-northwest(Car):-neighboring_cars(Car),
-                vehicle(ego,Lane1,Px1,_,_,_,_,_),
-                vehicle(Car,Lane2,Px2,_,_,_,_,_),
+front_left(Car):-target_vehicle(Car),
+                lane(ego,Lane1),position_x(ego,Px1),
+                lane(Car,Lane2),position_x(Car,Px2),
                 distanceX(ego,Car,D),D > 0,
                 (Lane1<4,Lane2 is Lane1+1,Px2 < Px1;Lane1>=4,Lane2 is Lane1-1,Px2 > Px1),!.
 
-southeast(Car):-neighboring_cars(Car),
-                vehicle(ego,Lane1,Px1,_,_,_,_,_),
-                vehicle(Car,Lane2,Px2,_,_,_,_,_),
+back_right(Car):-target_vehicle(Car),
+                lane(ego,Lane1),position_x(ego,Px1),
+                lane(Car,Lane2),position_x(Car,Px2),
                 distanceX(ego,Car,D),D > 0,
                 (Lane1<4,Lane2 is Lane1-1,Px2 > Px1;Lane1>=4,Lane2 is Lane1+1,Px2 < Px1),!.
 
-southwest(Car):-neighboring_cars(Car),
-                vehicle(ego,Lane1,Px1,_,_,_,_,_),
-                vehicle(Car,Lane2,Px2,_,_,_,_,_),
+back_left(Car):-target_vehicle(Car),
+                lane(ego,Lane1),position_x(ego,Px1),
+                lane(Car,Lane2),position_x(Car,Px2),
                 distanceX(ego,Car,D),D > 0,
                 (Lane1<4,Lane2 is Lane1+1,Px2 > Px1;Lane1>=4,Lane2 is Lane1-1,Px2 < Px1),!.
 
 % =============================================================================================
 % Busy sections relative to the ego car:
-north_is_busy:-neighboring_cars(Car),
-                vehicle(ego,Lane1,Px1,_,_,_,_,_),
-                vehicle(Car,Lane2,Px2,_,_,_,_,_),
+front_is_busy:-target_vehicle(Car),
+                lane(ego,Lane1),position_x(ego,Px1),
+                lane(Car,Lane2),position_x(Car,Px2),
                 Lane1 is Lane2,
                 (Lane1<4,Px2 < Px1;Lane1>=4,Px2 > Px1),
                 distanceX(ego,Car,D),D>0,!.
 
-northeast_is_busy:-neighboring_cars(Car),
-                vehicle(ego,Lane1,Px1,_,_,_,_,_),
-                vehicle(Car,Lane2,Px2,_,_,_,_,_),
+front_right_is_busy:-target_vehicle(Car),
+                lane(ego,Lane1),position_x(ego,Px1),
+                lane(Car,Lane2),position_x(Car,Px2),
                 distanceX(ego,Car,D),D > 0,
                 (Lane1<4,Lane2 is Lane1-1,Px2 < Px1;Lane1>=4,Lane2 is Lane1+1,Px2 > Px1),!.
 
-northwest_is_busy:-neighboring_cars(Car),
-                vehicle(ego,Lane1,Px1,_,_,_,_,_),
-                vehicle(Car,Lane2,Px2,_,_,_,_,_),
+front_left_is_busy:-target_vehicle(Car),
+                lane(ego,Lane1),position_x(ego,Px1),
+                lane(Car,Lane2),position_x(Car,Px2),
                 distanceX(ego,Car,D),D > 0,
                 (Lane1<4,Lane2 is Lane1+1,Px2 < Px1;Lane1>=4,Lane2 is Lane1-1,Px2 > Px1),!.
 
-east_is_busy:-neighboring_cars(Car),
-                vehicle(ego,Lane1,_,_,_,_,_,_),
-                vehicle(Car,Lane2,_,_,_,_,_,_),
+right_is_busy:-target_vehicle(Car),
+                lane(ego,Lane1),
+                lane(Car,Lane2),
                 distanceX(ego,Car,D),D is 0,
                 (Lane1<4,Lane2 is Lane1-1;Lane1>=4,Lane2 is Lane1+1),!.
 
-west_is_busy:-neighboring_cars(Car),
-                vehicle(ego,Lane1,_,_,_,_,_,_),
-                vehicle(Car,Lane2,_,_,_,_,_,_),
+left_is_busy:-target_vehicle(Car),
+                lane(ego,Lane1),
+                lane(Car,Lane2),
                 (Lane1<4,Lane2 is Lane1+1;Lane1>=4,Lane2 is Lane1-1),
                 distanceX(ego,Car,D),D is 0,!.
 
-south_is_busy:-neighboring_cars(Car),
-                vehicle(ego,Lane1,Px1,_,_,_,_,_),
-                vehicle(Car,Lane2,Px2,_,_,_,_,_),
+back_is_busy:-target_vehicle(Car),
+                lane(ego,Lane1),position_x(ego,Px1),
+                lane(Car,Lane2),position_x(Car,Px2),
                 Lane2 is Lane1,
                 (Lane1<4,Px2 > Px1;Lane1>=4,Px2 < Px1),
                 distanceX(ego,Car,D),D>0,!.
 
-southeast_is_busy:-neighboring_cars(Car),
-                vehicle(ego,Lane1,Px1,_,_,_,_,_),
-                vehicle(Car,Lane2,Px2,_,_,_,_,_),
+back_right_is_busy:-target_vehicle(Car),
+                lane(ego,Lane1),position_x(ego,Px1),
+                lane(Car,Lane2),position_x(Car,Px2),
                 distanceX(ego,Car,D),D > 0,
                 (Lane1<4,Lane2 is Lane1-1,Px2 > Px1;Lane1>=4,Lane2 is Lane1+1,Px2 < Px1),!.
 
-southwest_is_busy:-neighboring_cars(Car),
-                vehicle(ego,Lane1,Px1,_,_,_,_,_),
-                vehicle(Car,Lane2,Px2,_,_,_,_,_),
+back_left_is_busy:-target_vehicle(Car),
+                lane(ego,Lane1),position_x(ego,Px1),
+                lane(Car,Lane2),position_x(Car,Px2),
                 distanceX(ego,Car,D),D > 0,
                 (Lane1<4,Lane2 is Lane1+1,Px2 > Px1;Lane1>=4,Lane2 is Lane1-1,Px2 < Px1),!.
 
-ego_location_is_busy:-neighboring_cars(Car),
-                vehicle(ego,Lane1,_,_,_,_,_,_),
-                vehicle(Car,Lane2,_,_,_,_,_,_),
+ego_location_is_busy:-target_vehicle(Car),
+                lane(ego,Lane1),
+                lane(Car,Lane2),
                 Lane1 is Lane2,
                 distanceX(ego,Car,D),D is 0,!.
 
 % Free sections relative to the ego car:
-north_is_free:-not(north_is_busy).
-northeast_is_free:-not(northeast_is_busy).
-northwest_is_free:-not(northwest_is_busy).
-east_is_free:-not(east_is_busy).
-west_is_free:-not(west_is_busy).
-south_is_free:-not(south_is_busy).
-southeast_is_free:-not(southeast_is_busy).
-southwest_is_free:-not(southwest_is_busy).
+front_is_free:-not(front_is_busy).
+front_right_is_free:-not(front_right_is_busy).
+front_left_is_free:-not(front_left_is_busy).
+right_is_free:-not(right_is_busy).
+left_is_free:-not(left_is_busy).
+back_is_free:-not(back_is_busy).
+back_right_is_free:-not(back_right_is_busy).
+back_left_is_free:-not(back_left_is_busy).
 
 % =============================================================================================
 % possible actions
 safe_actions(Action):-ego_location_is_busy,
-                    (west_is_free->Action=left_lane_change;east_is_free->Action=right_lane_change;Action=lane_keeping),!.
+                    (left_is_free->Action=left_lane_change;right_is_free->Action=right_lane_change;Action=lane_keeping),!.
 
 safe_actions(Action):-
-    ((((east_is_free;west_is_free),south_is_busy,south(Car),distanceX(ego,Car,D),critical_distance(C),D<C))->Action = lane_change;
+    ((((right_is_free;left_is_free),back_is_busy,back(Car),distanceX(ego,Car,D),critical_distance(C),D<C))->Action = lane_change;
     Action = lane_keeping).
 
-safe_actions(Action):-vehicle(ego,Lane,_,_,_,_,_,_),
+safe_actions(Action):-lane(ego,Lane),
                     not(Lane is 3),not(Lane is 4),
-                    (west_is_free,southwest_is_free,northwest_is_free;
-                    west_is_free,northwest_is_free,southwest_is_busy,southwest(Car),relativeVelocity(ego,Car,RV),RV < 0),
+                    (left_is_free,back_left_is_free,front_left_is_free;
+                    left_is_free,front_left_is_free,back_left_is_busy,back_left(Car),relativeVelocity(ego,Car,RV),RV < 0),
                     Action = left_lane_change.
 
-safe_actions(Action):-vehicle(ego,Lane,_,_,_,_,_,_),
+safe_actions(Action):-lane(ego,Lane),
                     not(Lane is 1),not(Lane is 6),
-                    (east_is_free,southeast_is_free,northeast_is_free;
-                    east_is_free,northeast_is_free,southeast_is_busy,southeast(Car),relativeVelocity(ego,Car,RV),RV < 0),
+                    (right_is_free,back_right_is_free,front_right_is_free;
+                    right_is_free,front_right_is_free,back_right_is_busy,back_right(Car),relativeVelocity(ego,Car,RV),RV < 0),
                     Action = right_lane_change.
 
 possible_actions(Actions):-findall(Action,safe_actions(Action),Actions).
 
 % =============================================================================================
 % rules for longitudinal acceleration
-acceleration_x(Ax):-(north_is_free;ego_location_is_busy),
-                    vehicle(ego,Lane,_,_,_,_,Vego,_),
+acceleration_x(Ax):-(front_is_free;ego_location_is_busy),
+                    lane(ego,Lane),velocity_x(ego,Vego),
                     max_speed(Lane,Vmax),
                     time_step(Dt),
                     Ax is (Vmax-Vego)/Dt,!.
 
-acceleration_x(Ax):-north_is_busy,
-                    vehicle(ego,Lane1,_,_,_,_,Vx1,_),
-                    vehicle(Car,Lane2,_,_,_,_,Vx2,_),
+acceleration_x(Ax):-front_is_busy,
+                    lane(ego,Lane1),velocity_x(ego,Vx1),
+                    lane(Car,Lane2),velocity_x(Car,Vx2),
                     Lane1 is Lane2,
                     distanceX(ego,Car,D),
                     safe_distance(D),
@@ -225,9 +225,9 @@ acceleration_x(Ax):-north_is_busy,
                     Eps is 0.1,
                     Ax is (Vx2^2-Vx1^2)/2/(abs(D-C)+Eps),!.
 
-acceleration_x(Ax):-north_is_busy,
-                    vehicle(ego,Lane1,_,_,_,_,Vx1,_),
-                    vehicle(Car,Lane2,_,_,_,_,_,_),
+acceleration_x(Ax):-front_is_busy,
+                    lane(ego,Lane1),velocity_x(ego,Vx1),
+                    lane(Car,Lane2),
                     Lane1 is Lane2,
                     distanceX(ego,Car,D),
                     critical_distance(C),
@@ -240,37 +240,46 @@ longitudinal_velocity(Vx):-velocity_x(ego,V0),acceleration_x(Ax),time_step(Dt),V
 
 % =============================================================================================
 % Extract the state list
-state(A):-(north_is_free->A is 1;
-           north_is_busy->north(Car),distanceX(ego,Car,D),radar_range(R),A is D/R;
+state(A):-(front_is_free->A is 1;
+           front_is_busy->front(Car),distanceX(ego,Car,D),radar_range(R),A is D/R;
            A is -1).
+
 state(A):-(lane(ego,Lane),Lane is 6->A is 0;
-           (northeast_is_free->A is 1;
-            northeast_is_busy->northeast(Car),distance(ego,Car,D),radar_range(R),A is D/R;
+           (front_right_is_free->A is 1;
+            front_right_is_busy->front_right(Car),distance(ego,Car,D),radar_range(R),A is D/R;
             A is -1)).
+
 state(A):-(lane(ego,Lane),Lane is 6->A is 0;
-            (east_is_free->A is 1;
-            east_is_busy->east(Car),distanceY(ego,Car,D),radar_range(R),A is D/R;
+            (right_is_free->A is 1;
+            right_is_busy->right(Car),distanceY(ego,Car,D),radar_range(R),A is D/R;
             A is -1)).
+
 state(A):-(lane(ego,Lane),Lane is 6->A is 0;
-            (southeast_is_free->A is 1;
-            southeast_is_busy->southeast(Car),distance(ego,Car,D),radar_range(R),A is D/R;
+            (back_right_is_free->A is 1;
+            back_right_is_busy->back_right(Car),distance(ego,Car,D),radar_range(R),A is D/R;
             A is -1)).
-state(A):-(south_is_free->A is 1;
-            south_is_busy->south(Car),distanceX(ego,Car,D),radar_range(R),A is D/R;
+
+state(A):-(back_is_free->A is 1;
+            back_is_busy->back(Car),distanceX(ego,Car,D),radar_range(R),A is D/R;
             A is -1).
+
 state(A):-(lane(ego,Lane),Lane is 4->A is 0;
-            (southwest_is_free->A is 1;
-            southwest_is_busy->southwest(Car),distance(ego,Car,D),radar_range(R),A is D/R;
+            (back_left_is_free->A is 1;
+            back_left_is_busy->back_left(Car),distance(ego,Car,D),radar_range(R),A is D/R;
             A is -1)).
+
 state(A):-(lane(ego,Lane),Lane is 4->A is 0;
-            (west_is_free->A is 1;
-            west_is_busy->west(Car),distanceY(ego,Car,D),radar_range(R),A is D/R;
+            (left_is_free->A is 1;
+            left_is_busy->left(Car),distanceY(ego,Car,D),radar_range(R),A is D/R;
             A is -1)).
+
 state(A):-(lane(ego,Lane),Lane is 4->A is 0;
-            (northwest_is_free->A is 1;
-            northwest_is_busy->northwest(Car),distance(ego,Car,D),radar_range(R),A is D/R;
+            (front_left_is_free->A is 1;
+            front_left_is_busy->front_left(Car),distance(ego,Car,D),radar_range(R),A is D/R;
             A is -1)).
-state(A):-vehicle(ego,Lane,_,_,_,_,_,_),max_lane(MaxLane),A is Lane/MaxLane.
-state(A):-vehicle(ego,_,_,_,_,_,Vx,_),max_speed(MaxSpeed),A is Vx/MaxSpeed.
+
+state(A):-lane(ego,Lane),max_lane(MaxLane),A is Lane/MaxLane.
+
+state(A):-velocity_x(ego,Vx),max_speed(MaxSpeed),A is Vx/MaxSpeed.
 
 states(States):-findall(State,state(State),States).

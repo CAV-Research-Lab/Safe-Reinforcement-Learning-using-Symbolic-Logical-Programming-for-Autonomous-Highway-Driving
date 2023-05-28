@@ -13,23 +13,25 @@ from utils import get_decayed_param
 
 device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
 
+DECAY_EPISODES = 500
+
 # dqn parameters
 STATE_SIZE = 10
 N_ACTIONS = 3
 LEARNING_RATE = 0.001  # learning rate
 LEARNING_RATE_FINAL = 0.00001 # final learning rate
-LEARNING_RATE_DECAY = 5e-7 # learning rate decay 
+LEARNING_RATE_DECAY = (LEARNING_RATE - LEARNING_RATE_FINAL)/DECAY_EPISODES/2 # learning rate decay 
 GAMMA = 0.995  # discount factor
 EPS = 0.1  # initial exploration rate
 EPS_FINAL = 0.001  # final exploration rate
-EPS_DECAY = 5e-5  # exploration rate decay
-MEM_SIZE = int(1e4)  # memory size
+EPS_DECAY = (EPS - EPS_FINAL)/DECAY_EPISODES  # exploration rate decay
+MEM_SIZE = int(1e5)  # memory size
 BATCH_SIZE = 128  # experience the batch size
 
 # dqn
 FC1_UNITS = 256  # fc 1 units
 FC2_UNITS = 256  # fc layer 2 units
-TARGET_UPDATE = 200  # number of steps to update the target
+TARGET_UPDATE = 1000  # number of steps to update the target
 
 
 # =====================================================================
@@ -221,8 +223,10 @@ class DQAgent:
     def learn(self, episode):
 
         # check the memory
-        if len(self.memory) < self.batch_size:
-            return
+        if len(self.memory) < BATCH_SIZE:
+            self.batch_size = len(self.memory)
+        else:
+            self.batch_size = BATCH_SIZE
 
         self.net.optimizer.zero_grad()
 

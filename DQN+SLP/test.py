@@ -167,7 +167,7 @@ if __name__ == '__main__':
         screen.blit(bg, (0, 0))
         x_ego, y_ego = agent.x, agent.y
 
-        with open('prolog files/vehicle_clauses.pl', 'w') as f:
+        with open('prolog files/vehicles_info.pl', 'w') as f:
             for vId, vLane, v_pos, v_pos_pygame, v_vel in zip(vehicles_id, vehicles_lane, vehicles_pos,
                                                               vehicle_pos_pygame, vehicles_vel):
                 d = get_distance([x_ego, y_ego], [v_pos[0], v_pos[1]])
@@ -203,7 +203,7 @@ if __name__ == '__main__':
 
         # reconsult the prolog file to load clauses for finding safe actions
         # you should add 'reconsult' command like 'consult' in pyswip file -> find prolog.py in pyswip installed directory
-        prolog.reconsult('prolog files/choosing_actions_highway.pl')
+        prolog.reconsult('prolog files/symbolic_logical_programming.pl')
 
         # Action = list(prolog.query('safe_actions(Action)'))
         L = list(prolog.query('possible_actions(Actions)'))
@@ -248,11 +248,9 @@ if __name__ == '__main__':
             if score >= best_score:
                 best_score = score  # make best episode this episode
                 agent.dq_agent.net.save_weights("weights/best_weights_" + str(best_score) + '_' + str(timestr))
-
+            
             avg_loss = np.average(agent.dq_agent.losses)
             avg_reward = np.average(agent.rewards)
-
-            agent.dq_agent.losses = []
             scores.append(score)
 
             # Total steps
