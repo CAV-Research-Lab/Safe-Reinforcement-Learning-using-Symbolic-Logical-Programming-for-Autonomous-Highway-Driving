@@ -13,16 +13,18 @@ from utils import get_decayed_param
 
 device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
 
+DECAY_EPISODES = 1000
+
 # dqn parameters
 STATE_SIZE = 10
 N_ACTIONS = 3
 LEARNING_RATE = 0.001  # learning rate
 LEARNING_RATE_FINAL = 0.00001 # final learning rate
-LEARNING_RATE_DECAY = (LEARNING_RATE - LEARNING_RATE_FINAL)/3000  # learning rate decay 
+LEARNING_RATE_DECAY = (LEARNING_RATE - LEARNING_RATE_FINAL)/DECAY_EPISODES/2  # learning rate decay 
 GAMMA = 0.995  # discount factor
 EPS = 0.1  # initial exploration rate
 EPS_FINAL = 0.001  # final exploration rate
-EPS_DECAY = (EPS - EPS_FINAL)/1000  # exploration rate decay
+EPS_DECAY = (EPS - EPS_FINAL)/DECAY_EPISODES  # exploration rate decay
 MEM_SIZE = int(1e5)  # memory size
 BATCH_SIZE = 128  # experience the batch size
 
