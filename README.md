@@ -4,16 +4,14 @@
 TOWARDS SAFE AUTONOMOUS DRIVING POLICIES USING A NEURO-SYMBOLIC DEEP REINFORCEMENT LEARNING APPROACH
 
 ## Abstract
-
-The dynamic nature of driving environments and the presence of diverse road
+<p align="justify"> The dynamic nature of driving environments and the presence of diverse road
 users pose significant challenges for decision-making in autonomous driving.
 Deep reinforcement learning (DRL) has emerged as a popular approach to tackle
 this problem. However, the application of existing DRL solutions is mainly confined to simulated environments due to safety concerns, impeding their deployment in real-world. To overcome this limitation, this paper introduces a novel neuro-symbolic model-free DRL approach, called DRL with Symbolic Logics (DRLSL) that combines the strengths of DRL (learning from experience) and symbolic first-order logics (knowledge-driven reasoning) to enable safe learning in real-time interactions of autonomous driving within real environments. This innovative approach provides a means to learn autonomous driving policies by actively engaging with the physical environment while ensuring safety. We have implemented the DRLSL framework in autonomous driving using the highD dataset
 and demonstrated that our method successfully avoids unsafe actions during both
 the training and testing phases. Furthermore, our results indicate that DRLSL
 achieves faster convergence during training and exhibits better generalizability to
-new driving scenarios compared to traditional DRL methods.
-
+new driving scenarios compared to traditional DRL methods.</p>
 ## Paper
 Full pdf version of the paper is available in this [link](https://arxiv.org/pdf/2307.01316.pdf?).
 
@@ -56,12 +54,14 @@ git clone https://github.com/CAV-Research-Lab/Safe-Reinforcement-Learning-using-
 6- run `train.py` in `DQN+SLP/` directory of the cloned repository to train the agent
 
 ## Code development
+<p align="justify"> If you keep a close look at the `train.py` file, there are some initial parameters you need to change as you wish. The primary parameter is `SAFE`; when `SAFE=True`, we are running DQNSL program;otherwise, the program is a regular DQN. The parameters were set suitably, but if you need to change them, just act according to the comments in front of each parameter.
+ </p>
 
-If you keep a close look at the `train.py` file, there are some initial parameters you need to change as you wish. The primary parameter is `SAFE`; when `SAFE=True`, we are running DQNSL program;otherwise, the program is a regular DQN. The parameters were set suitably, but if you need to change them, just act according to the comments in front of each parameter.
+<p align="justify"> To set the hyperparameters of the deep Q-network, you can change the parameters in the beginning part of the `DQN.py` file. Moreover, you can find different reward functions in the `agent.py` file and set them manually if needed. The reward functions are not according to the article, but you can simply modify them. You can also add your own methods to the agent class.
+ </p>
 
-To set the hyperparameters of the deep Q-network, you can change the parameters in the beginning part of the `DQN.py` file. Moreover, you can find different reward functions in the `agent.py` file and set them manually if needed. The reward functions are not according to the article, but you can simply modify them. You can also add your own methods to the agent class.
-
-We leveraged Prolog to implement symbolic first-order logics (FOL) in the context of autonomous highway drivings. The symbolic logical program (SLP) core (mentioned in the article) file, as termed `symbolic_logical_programming.pl`, can be found in the `prolog_files/` directory. If you need to develop the symbolic rules, you can add your own rules to the program. However, you should notice that the rules have been meticulously designed and there is no need for adding other rules.
+<p align="justify"> We leveraged Prolog to implement symbolic first-order logics (FOL) in the context of autonomous highway drivings. The symbolic logical program (SLP) core (mentioned in the article) file, as termed `symbolic_logical_programming.pl`, can be found in the `prolog_files/` directory. If you need to develop the symbolic rules, you can add your own rules to the program. However, you should notice that the rules have been meticulously designed and there is no need for adding other rules.
+ </p>
 
 ## Reference
 If you make use of the paper and code, please use the following bibliography to cite it:
