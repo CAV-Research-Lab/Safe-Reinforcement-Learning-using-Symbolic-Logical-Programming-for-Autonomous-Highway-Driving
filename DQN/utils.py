@@ -42,17 +42,6 @@ def get_decayed_param(initial_value=0.001, decay_value=1e-7, final_value=0.00001
 
     return param
 
-def get_decayed_epsilon(initial_value=0.001, decay_value=1e-7, final_value=0.00001, episode=0):
-    if episode < 10:
-        epsilon = 1 - 0.1*episode
-    else: 
-        epsilon = initial_value - episode*decay_value
-
-    if epsilon < final_value:
-        epsilon = final_value
-
-    return epsilon
-
 def get_decayed_param1(param=0.001, decay_value=1e-7, final_value=0.00001):
 
     param = param - decay_value

@@ -26,9 +26,9 @@ prolog = Prolog()
 
 # Adjustable parameters ============================================
 SAFE = True  # True for DQN + Symbolic Logical Programming (SLP) and False for DQN only
-TRAIN = True  # 1 for train and 0 for test
-N_EPISODES = 5000  # number of episodes for training
-N_EPOCHS = 1  # each epoch is 420 meters
+TRAIN = False  # 1 for train and 0 for test
+N_EPISODES = 100  # number of episodes for training
+N_EPOCHS = 5  # each epoch is 420 meters
 WEIGHT_SAVE_STEPS = 20  # save weights after this number of steps
 DIRECTION = 1  # highway direction [1 for left to right & -1 for right to left]
 BEST_WEIGHT_FILE = 'weights/weights_20230524-223147'

@@ -25,7 +25,7 @@ warnings.filterwarnings('ignore')
 prolog = Prolog()
 
 # Adjustable parameters ============================================
-SAFE = True  # True for DQN + Symbolic Logical Programming (SLP) and False for DQN only
+SAFE = False  # True for DQN + Symbolic Logical Programming (SLP) and False for DQN only
 TRAIN = True  # 1 for train and 0 for test
 N_EPISODES = 5000  # number of episodes for training
 N_EPOCHS = 1  # each epoch is 420 meters
