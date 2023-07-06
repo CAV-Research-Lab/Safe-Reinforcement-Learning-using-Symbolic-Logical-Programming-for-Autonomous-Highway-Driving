@@ -12,6 +12,7 @@ and demonstrated that our method successfully avoids unsafe actions during both
 the training and testing phases. Furthermore, our results indicate that DRLSL
 achieves faster convergence during training and exhibits better generalizability to
 new driving scenarios compared to traditional DRL methods.</p>
+
 ## Paper
 Full pdf version of the paper is available in this [link](https://arxiv.org/pdf/2307.01316.pdf?).
 
