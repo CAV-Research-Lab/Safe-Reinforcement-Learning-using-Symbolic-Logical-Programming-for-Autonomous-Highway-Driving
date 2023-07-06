@@ -54,14 +54,12 @@ git clone https://github.com/CAV-Research-Lab/Safe-Reinforcement-Learning-using-
 6- run `train.py` in `DQN+SLP/` directory of the cloned repository to train the agent
 
 ## Code development
-<p align="justify"> If you keep a close look at the `train.py` file, there are some initial parameters you need to change as you wish. The primary parameter is `SAFE`; when `SAFE=True`, we are running DQNSL program;otherwise, the program is a regular DQN. The parameters were set suitably, but if you need to change them, just act according to the comments in front of each parameter.
- </p>
 
-<p align="justify"> To set the hyperparameters of the deep Q-network, you can change the parameters in the beginning part of the `DQN.py` file. Moreover, you can find different reward functions in the `agent.py` file and set them manually if needed. The reward functions are not according to the article, but you can simply modify them. You can also add your own methods to the agent class.
- </p>
+If you keep a close look at the `train.py` file, there are some initial parameters you need to change as you wish. The primary parameter is `SAFE`; when `SAFE=True`, we are running DQNSL program;otherwise, the program is a regular DQN. The parameters were set suitably, but if you need to change them, just act according to the comments in front of each parameter.
 
-<p align="justify"> We leveraged Prolog to implement symbolic first-order logics (FOL) in the context of autonomous highway drivings. The symbolic logical program (SLP) core (mentioned in the article) file, as termed `symbolic_logical_programming.pl`, can be found in the `prolog_files/` directory. If you need to develop the symbolic rules, you can add your own rules to the program. However, you should notice that the rules have been meticulously designed and there is no need for adding other rules.
- </p>
+To set the hyperparameters of the deep Q-network, you can change the parameters in the beginning part of the `DQN.py` file. Moreover, you can find different reward functions in the `agent.py` file and set them manually if needed. The reward functions are not according to the article, but you can simply modify them. You can also add your own methods to the agent class.
+
+We leveraged Prolog to implement symbolic first-order logics (FOL) in the context of autonomous highway drivings. The symbolic logical program (SLP) core (mentioned in the article) file, as termed `symbolic_logical_programming.pl`, can be found in the `prolog_files/` directory. If you need to develop the symbolic rules, you can add your own rules to the program. However, you should notice that the rules have been meticulously designed and there is no need for adding other rules.
 
 ## Reference
 If you make use of the paper and code, please use the following bibliography to cite it:
