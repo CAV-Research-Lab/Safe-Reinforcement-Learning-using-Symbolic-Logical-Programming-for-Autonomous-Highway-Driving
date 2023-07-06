@@ -17,7 +17,7 @@ new driving scenarios compared to traditional DRL methods.
 ## Video results
 The following video show the performance of the autonomous vehicle in the highway scenario. The results show that not only is the driving completely safe, but also it is efficient.
 You can see the result in this [video link](https://github.com/CAV-Research-Lab/Safe-Reinforcement-Learning-using-Symbolic-Logical-Programming-for-Autonomous-Highway-Driving/blob/main/videos/results_June6%2C2023.webm).
-
+![](https://github.com/CAV-Research-Lab/Safe-Reinforcement-Learning-using-Symbolic-Logical-Programming-for-Autonomous-Highway-Driving/blob/main/videos/results_June6%2C2023.gif)
 
 ## How to Run:
 All of the codes were verified on Ubuntu 20.04 (you may need to note the installation processes when using different Operating Systems):
