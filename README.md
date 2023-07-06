@@ -65,6 +65,11 @@ We leveraged Prolog to implement symbolic first-order logics (FOL) in the contex
 ## Reference
 If you make use of the paper and code, please use the following bibliography to cite it:
 ```
-under processing
+@article{sharifi2023towards,
+  title={towards safe autonomous driving policies using a neuro-symbolic deep reinforcement learning approach},
+  author={Sharifi, Iman, and Yildirim, Mustafa, and Fallah, Saber},
+  journal={arXiv preprint arXiv:2307.01316},
+  year={2023}
+}
 ```
 
