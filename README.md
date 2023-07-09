@@ -13,6 +13,8 @@ the training and testing phases. Furthermore, our results indicate that DRLSL
 achieves faster convergence during training and exhibits better generalizability to
 new driving scenarios compared to traditional DRL methods.</p>
 
+![](https://github.com/CAV-Research-Lab/Safe-Reinforcement-Learning-using-Symbolic-Logical-Programming-for-Autonomous-Highway-Driving/blob/main/videos/SDQN.png)
+
 ## Paper
 Full pdf version of the paper is available in this [link](https://arxiv.org/pdf/2307.01316.pdf?).
 
