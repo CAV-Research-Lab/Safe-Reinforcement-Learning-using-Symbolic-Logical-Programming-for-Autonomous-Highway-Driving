@@ -117,6 +117,9 @@ class AgentCar:
 
         self.traveled_distance = 0
 
+        # if there is a vehicle in front of the AV
+        self.front_is_free = True
+
     def reset_epoch(self):
         # get the initial x value
         if self.direction == 1:
@@ -276,8 +279,10 @@ class AgentCar:
     def get_lane_change_reward(self, action):
 
         if action == 'left_lane_change' or action == 'right_lane_change':
-            return REWARD_LANE_CHANGE
-        
+            if self.front_is_free:
+                return REWARD_LANE_CHANGE
+            else:
+                return -REWARD_LANE_CHANGE
         else:
             return 0
 

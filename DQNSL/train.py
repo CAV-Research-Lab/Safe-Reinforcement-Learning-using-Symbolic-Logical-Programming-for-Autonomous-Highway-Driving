@@ -27,11 +27,13 @@ prolog = Prolog()
 # Adjustable parameters ============================================
 SAFE = True  # True for DQN + Symbolic Logical Programming (SLP) and False for DQN only
 TRAIN = True  # 1 for train and 0 for test
-N_EPISODES = 5000  # number of episodes for training
-N_EPOCHS = 1  # each epoch is 420 meters
-WEIGHT_SAVE_STEPS = 20  # save weights after this number of steps
+N_EPISODES = 1500  # number of episodes for training
+N_EPOCHS = 2  # each epoch is 420 meters
+SAVE_DATA_STEPS = 20  # save weights after this number of steps
 DIRECTION = 1  # highway direction [1 for left to right & -1 for right to left]
 BEST_WEIGHT_FILE = 'weights/weights_20230524-223147'
+WEIGHT_FILE = 'weights/weights'
+MEMORY_FILE = 'memory/memory.pkl'
 DATASET_DIRECTORY = '../dataset/'
 if SAFE:
     if TRAIN:
@@ -145,6 +147,7 @@ if __name__ == '__main__':
     # episode counter
     episode = 0
     best_score = -math.inf
+    max_distance = N_EPISODES * road_length
 
     # frame counter
     frame = 0
@@ -167,7 +170,7 @@ if __name__ == '__main__':
         screen.blit(bg, (0, 0))
         x_ego, y_ego = agent.x, agent.y
 
-        with open('prolog files/vehicle_clauses.pl', 'w') as f:
+        with open('prolog files/vehicles_info.pl', 'w') as f:
             for vId, vLane, v_pos, v_pos_pygame, v_vel in zip(vehicles_id, vehicles_lane, vehicles_pos,
                                                               vehicle_pos_pygame, vehicles_vel):
                 d = get_distance([x_ego, y_ego], [v_pos[0], v_pos[1]])
@@ -203,29 +206,42 @@ if __name__ == '__main__':
 
         # reconsult the prolog file to load clauses for finding safe actions
         # you should add 'reconsult' command like 'consult' in pyswip file -> find prolog.py in pyswip installed directory
-        prolog.reconsult('prolog files/choosing_actions_highway.pl')
+        prolog.reconsult('prolog files/symbolic_logical_programming.pl')
 
         # Action = list(prolog.query('safe_actions(Action)'))
         L = list(prolog.query('possible_actions(Actions)'))
         safeActions = []
         for action in L[0]['Actions']:
             safeActions.append(str(action))
-        Desired_velocity_x = list(prolog.query('longitudinal_velocity(Vx)'))
-        L = list(prolog.query("states(State)"))
-        states = []
-        for state in L[0]['State']:
-            states.append(state)
-
-        # update state
-        agent.state = states
-
         # update the safe action set
         agent.possible_actions = safeActions
         # print(f">>> Safe action set: {safeActions}.")
 
+        front_is_free = list(prolog.query('front_is_free'))
+        if front_is_free== [{}]:
+            agent.front_is_free = True
+        else:
+            agent.front_is_free = False
+        # print(agent.front_is_free)
+
+        Desired_velocity_x = list(prolog.query('longitudinal_velocity(Vx)'))
         # update the desired velocity
         agent.V_x_desired = Desired_velocity_x[0]['Vx']
         # print(f">>> Desired Velocity x: {Desired_velocity_x[0]['Vd_x']}.", end="\n")
+
+        L = list(prolog.query("states(State)"))
+        states = []
+        for state in L[0]['State']:
+            states.append(state)
+        # update state
+        agent.state = states
+
+        L = list(prolog.query("rewards(Rewards)"))
+        Rewards = []
+        for reward in L[0]['Rewards']:
+            Rewards.append(reward)
+        # update state
+        agent.reward_slp = sum(Rewards)
 
         EgoRect, EgoColor = agent.rect, agent.color
         pygame.draw.rect(screen, EgoColor, EgoRect)
@@ -233,7 +249,7 @@ if __name__ == '__main__':
         clock.tick(40)
 
         # update the agent car
-        done, score = agent.update(timestep, episode, neighboring_vehicles_pos, safe=SAFE, train=TRAIN)
+        done, score = agent.update(timestep, episode, neighboring_vehicles_pos, safe=SAFE, train=TRAIN, max_distance=max_distance)
 
         # end the episode if done 
         if done or agent.epoch == N_EPOCHS:
@@ -243,69 +259,86 @@ if __name__ == '__main__':
             else:
                 pass
 
-            # compare this episodes and the current best
-            # episode's score
-            if score >= best_score:
-                best_score = score  # make best episode this episode
-                agent.dq_agent.net.save_weights("weights/best_weights_" + str(best_score) + '_' + str(timestr))
+            if episode == 0 or agent.n_hits == 0:
 
-            avg_loss = np.average(agent.dq_agent.losses)
-            avg_reward = np.average(agent.rewards)
+                # compare this episodes and the current best
+                # episode's score
+                if score >= best_score:
+                    best_score = score  # make best episode this episode
+                    best_weights_file = "weights/best_weights_" + str(best_score) + '_' + str(timestr)
+                    agent.dq_agent.net.save_weights(best_weights_file)
+                
+                avg_loss = np.average(agent.dq_agent.losses)
+                avg_reward = np.average(agent.rewards)
+                scores.append(score)
 
-            agent.dq_agent.losses = []
-            scores.append(score)
+                # Total steps
+                Steps.append(steps)
 
-            # Total steps
-            Steps.append(steps)
+                # Append rewards into lists
+                R_lc.append(agent.lane_change_reward_sum)
+                R_v.append(agent.velocity_reward_sum)
+                R_d.append(agent.distance_reward_sum)
+                R_c.append(agent.collision_reward_sum)
+                R_out.append(agent.out_of_highway_reward_sum)
+                R_end.append(agent.end_of_lane_reward_sum)
+                R_t.append(agent.time_waste_reward_sum)
 
-            # Append rewards into lists
-            R_lc.append(agent.lane_change_reward_sum)
-            R_v.append(agent.velocity_reward_sum)
-            R_d.append(agent.distance_reward_sum)
-            R_c.append(agent.collision_reward_sum)
-            R_out.append(agent.out_of_highway_reward_sum)
-            R_end.append(agent.end_of_lane_reward_sum)
-            R_t.append(agent.time_waste_reward_sum)
+                R_avg.append(avg_reward)
+                R_sum.append(agent.cumulative_reward)
 
-            R_avg.append(avg_reward)
-            R_sum.append(agent.cumulative_reward)
+                # Number of hits
+                n_hits.append(agent.n_hits)
+                n_lane_changes.append(int(agent.n_lane_changes))
 
-            # Number of hits
-            n_hits.append(agent.n_hits)
-            n_lane_changes.append(int(agent.n_lane_changes))
+                # Loss average
+                avg_losses.append(avg_loss)
 
-            # Loss average
-            avg_losses.append(avg_loss)
+                # create dataframe to save rewards in excel
+                df = pd.DataFrame()
 
-            # create dataframe to save rewards in excel
-            df = pd.DataFrame()
+                # specify column name to each list
+                df['steps'] = Steps
+                df['R_lc'] = R_lc
+                df['R_v'] = R_v
+                df['R_d'] = R_d
+                df['R_c'] = R_c
+                df['R_out'] = R_out
+                df['R_end'] = R_end
+                df['R_t'] = R_t
+                df['R_avg'] = R_avg
+                df['Score'] = R_sum
+                df['n_hits'] = n_hits
+                df['n_lc'] = n_lane_changes
+                df['Loss'] = avg_losses
 
-            # specify column name to each list
-            df['steps'] = Steps
-            df['R_lc'] = R_lc
-            df['R_v'] = R_v
-            df['R_d'] = R_d
-            df['R_c'] = R_c
-            df['R_out'] = R_out
-            df['R_end'] = R_end
-            df['R_t'] = R_t
-            df['R_avg'] = R_avg
-            df['Score'] = R_sum
-            df['n_hits'] = n_hits
-            df['n_lc'] = n_lane_changes
-            df['Loss'] = avg_losses
+                memory_size = len(agent.dq_agent.memory.memory)
 
-            # Print important data
-            print(
-                f'Episode:{episode + 1}/{N_EPISODES}| R_sum:{agent.cumulative_reward:.4f}| R_avg:{avg_reward:.4f}| Loss:{avg_loss:.4f}| LaneChange:{int(agent.n_lane_changes)}| Hits:{agent.n_hits}| LR: {agent.dq_agent.net.lr:.5f}| Eps:{agent.dq_agent.eps:.4f}| Traveled_distance: {agent.traveled_distance:.4f}| Epoch: {agent.epoch}',
-                end="\n\n")
+                # Print important data
+                print(f'Episode:{episode + 1}/{N_EPISODES}| R_sum:{agent.cumulative_reward:.4f}|' +  
+                      f'R_avg:{avg_reward:.4f}| Loss:{avg_loss:.4f}| LaneChange:{int(agent.n_lane_changes)}|' +
+                      f'Hits:{agent.n_hits}| LR: {agent.dq_agent.net.lr:.5f}| Eps:{agent.dq_agent.eps:.4f}|' + 
+                      f'Traveled_distance: {agent.traveled_distance:.4f}| Epoch: {agent.epoch}| MemSize:{memory_size}',
+                      end="\n\n")
 
-            # Save dataframe to excel
-            if int((episode + 1) % WEIGHT_SAVE_STEPS) == 0:
-                df.to_excel(OUTPUT_EXCEL_FILE)
+                # Save dataframe to excel
+                if int((episode + 1) % SAVE_DATA_STEPS) == 0:
+                    df.to_excel(OUTPUT_EXCEL_FILE)
 
-            episode += 1
-            steps = 0
+                episode += 1
+                steps = 0
+
+                # save weights periodically
+                agent.dq_agent.net.save_weights(WEIGHT_FILE)
+
+                # save memory
+                agent.dq_agent.memory.save_memory(MEMORY_FILE)
+
+            else:
+                print("Loading weights and memory ... \n")
+                agent.dq_agent.net.load_weights(WEIGHT_FILE)
+                agent.dq_agent.target_net.load_weights(best_weights_file)
+                agent.dq_agent.memory.load_memory(MEMORY_FILE)
 
             # make the summation of each reward subfunction zero
             agent.reset_episode()
@@ -315,10 +348,6 @@ if __name__ == '__main__':
         if frame >= len(frame_list):
             print(frame)
             frame = 0
-
-        # save
-        if episode % WEIGHT_SAVE_STEPS == 0:
-            agent.dq_agent.net.save_weights("weights/weights_" + str(timestr))
 
     # save weights at the end of the training
     agent.dq_agent.net.save_weights("weights/weights_" + str(episode) + '_' + str(timestr))

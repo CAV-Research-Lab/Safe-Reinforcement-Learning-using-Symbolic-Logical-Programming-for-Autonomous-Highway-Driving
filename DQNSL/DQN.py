@@ -9,27 +9,30 @@ from torch import nn
 import numpy as np
 from collections import deque
 import random
-from utils import get_decayed_param
+import pickle
+from utils import get_decayed_param, get_decayed_epsilon
 
 device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
 
+DECAY_EPISODES = 500
+
 # dqn parameters
-STATE_SIZE = 10
+STATE_SIZE = 9
 N_ACTIONS = 3
-LEARNING_RATE = 0.001  # learning rate
-LEARNING_RATE_FINAL = 0.00001 # final learning rate
-LEARNING_RATE_DECAY = 5e-7 # learning rate decay 
+LEARNING_RATE = 0.01  # learning rate
+LEARNING_RATE_FINAL = 0.0001 # final learning rate
+LEARNING_RATE_DECAY = (LEARNING_RATE - LEARNING_RATE_FINAL)/DECAY_EPISODES/2 # learning rate decay 
 GAMMA = 0.995  # discount factor
 EPS = 0.1  # initial exploration rate
 EPS_FINAL = 0.001  # final exploration rate
-EPS_DECAY = 5e-5  # exploration rate decay
-MEM_SIZE = int(1e4)  # memory size
+EPS_DECAY = (EPS - EPS_FINAL)/DECAY_EPISODES  # exploration rate decay
+MEM_SIZE = int(1e5)  # memory size
 BATCH_SIZE = 128  # experience the batch size
 
 # dqn
 FC1_UNITS = 256  # fc 1 units
 FC2_UNITS = 256  # fc layer 2 units
-TARGET_UPDATE = 200  # number of steps to update the target
+TARGET_UPDATE = 1000  # number of steps to update the target
 
 
 # =====================================================================
@@ -85,6 +88,9 @@ class DQN(nn.Module):
         self.weight_file_path = file_path
         torch.save(self.state_dict(), file_path)
 
+    def load_weights(self, file_path):
+        self.load_state_dict(torch.load(file_path))
+
 
 # =====================================================================
 # the replay memory
@@ -93,20 +99,17 @@ class Memory:
     # =====================================================================
     # constructor
     def __init__(self, max_size):
-        self.index = 0  # next index to store
         self.max_size = max_size  # max memory size
-        self.memory = deque(maxlen=max_size)  # memory deque
+        self.memory = []  # memory list
 
     # =====================================================================
     # push the given imput as a tuple to the memmory
     def push(self, state, next_state, action, reward, done):
-        # extend until max memory
-        if len(self.memory) < self.max_size:
-            self.memory.append(None)
-
         # set the tuple
-        self.memory[self.index] = (state, next_state, action, reward, done)
-        self.index = (self.index + 1) % self.max_size  # update the index
+        self.memory.append((state, next_state, action, reward, done))
+        if self.__len__() > MEM_SIZE:
+            temp = self.memory[-MEM_SIZE:-1]
+            self.memory = temp
 
     # =====================================================================
     # return a random batch of batch size
@@ -127,6 +130,14 @@ class Memory:
     # get the memory size
     def __len__(self):
         return len(self.memory)
+    
+    def save_memory(self, file_path):
+        with open(file_path, 'wb') as file:
+            pickle.dump(self.memory, file)
+
+    def load_memory(self, file_path):
+        with open(file_path, 'rb') as file:
+            self.memory = pickle.load(file)
 
 
 # =====================================================================
@@ -187,8 +198,10 @@ class DQAgent:
                     indexes.append(0)
                 elif action == 'left_lane_change':
                     indexes.append(1)
-                else:
+                elif action == 'right_lane_change':
                     indexes.append(2)
+                else:
+                    indexes.append(0)
         else:
             # DQN can choose both safe and unsafe actions
             indexes = [0, 1, 2]
@@ -210,7 +223,7 @@ class DQAgent:
         lr = get_decayed_param(initial_value=LEARNING_RATE, decay_value=LEARNING_RATE_DECAY, final_value=LEARNING_RATE_FINAL, episode=episode)
 
         # update the exploration rate
-        eps = get_decayed_param(initial_value=EPS, decay_value=EPS_DECAY, final_value=EPS_FINAL, episode=episode)
+        eps = get_decayed_epsilon(initial_value=EPS, decay_value=EPS_DECAY, final_value=EPS_FINAL, episode=episode)
 
         return lr, eps
         
@@ -221,8 +234,10 @@ class DQAgent:
     def learn(self, episode):
 
         # check the memory
-        if len(self.memory) < self.batch_size:
-            return
+        if len(self.memory) < BATCH_SIZE:
+            self.batch_size = len(self.memory)
+        else:
+            self.batch_size = BATCH_SIZE
 
         self.net.optimizer.zero_grad()
 
