@@ -204,9 +204,7 @@ if __name__ == '__main__':
             f.write(EgoFact)
             f.close()
 
-        # reconsult the prolog file to load clauses for finding safe actions
-        # you should add 'reconsult' command like 'consult' in pyswip file -> find prolog.py in pyswip installed directory
-        prolog.reconsult('prolog files/symbolic_logical_programming.pl')
+        prolog.consult('prolog files/symbolic_logical_programming.pl')
 
         # Action = list(prolog.query('safe_actions(Action)'))
         L = list(prolog.query('possible_actions(Actions)'))

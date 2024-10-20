@@ -5,3 +5,5 @@ openpyxl
 pygame
 pyswip
 torch
+scipy
+
